@@ -1,0 +1,6 @@
+{
+  "name": "QuizMaster AI",
+  "description": "An intelligent quiz generation application powered by Gemini. Create engaging quizzes on any topic in seconds and test your knowledge.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
