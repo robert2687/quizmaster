@@ -1,23 +1,30 @@
-
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SparklesIcon from './icons/SparklesIcon';
+import { Difficulty } from '../types';
 
 interface TopicFormProps {
-  onGenerateQuiz: (topic: string) => void;
+  onGenerateQuiz: (topic: string, difficulty: Difficulty) => void;
   isGenerating: boolean;
 }
 
 const TopicForm: React.FC<TopicFormProps> = ({ onGenerateQuiz, isGenerating }) => {
   const { t } = useTranslation();
   const [topic, setTopic] = useState<string>('');
+  const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (topic.trim() && !isGenerating) {
-      onGenerateQuiz(topic.trim());
+      onGenerateQuiz(topic.trim(), difficulty);
     }
   };
+
+  const difficultyOptions = [
+    { id: Difficulty.EASY, label: t('difficultyEasy') },
+    { id: Difficulty.MEDIUM, label: t('difficultyMedium') },
+    { id: Difficulty.HARD, label: t('difficultyHard') },
+  ];
 
   return (
     <div className="w-full max-w-lg p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">
@@ -38,6 +45,31 @@ const TopicForm: React.FC<TopicFormProps> = ({ onGenerateQuiz, isGenerating }) =
             aria-label={t('topicFormLabel')}
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">
+            {t('difficultyLabel')}
+          </label>
+          <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-700 p-1">
+            {difficultyOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setDifficulty(option.id)}
+                className={`w-full px-2 py-2 text-sm font-semibold rounded-md transition-colors duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-800
+                  ${difficulty === option.id
+                    ? 'bg-purple-600 text-white shadow'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }
+                `}
+                aria-pressed={difficulty === option.id}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
           type="submit"
           disabled={isGenerating || !topic.trim()}

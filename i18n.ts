@@ -1,3 +1,4 @@
+
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
@@ -17,6 +18,10 @@ const resources = {
       topicFormPlaceholder: "e.g., The Solar System",
       generateQuizButton: "Generate Quiz",
       generatingButton: "Generating...",
+      difficultyLabel: "Select Difficulty:",
+      difficultyEasy: "Easy",
+      difficultyMedium: "Medium",
+      difficultyHard: "Hard",
       // LoadingSpinner
       loadingMessageDefault: "Generating your quiz...",
       loadingMessageTopic: "Generating your quiz on \"{{topic}}\"...",
@@ -29,6 +34,9 @@ const resources = {
       nextQuestionButton: "Next Question",
       viewResultsButton: "View Results",
       processingButton: "Processing...",
+      timeLeft: "Time Left",
+      secondsRemaining_one: "{{count}} second remaining",
+      secondsRemaining_other: "{{count}} seconds remaining",
       // ResultsDisplay
       resultsTitle: "Quiz Results",
       resultsTopicLabel: "Topic: {{topic}}",
@@ -77,6 +85,10 @@ const resources = {
       topicFormPlaceholder: "napr. Slnečná sústava",
       generateQuizButton: "Generovať kvíz",
       generatingButton: "Generujem...",
+      difficultyLabel: "Zvoľte náročnosť:",
+      difficultyEasy: "Ľahká",
+      difficultyMedium: "Stredná",
+      difficultyHard: "Ťažká",
       // LoadingSpinner
       loadingMessageDefault: "Generujem váš kvíz...",
       loadingMessageTopic: "Generujem váš kvíz na tému \"{{topic}}\"...",
@@ -89,6 +101,10 @@ const resources = {
       nextQuestionButton: "Ďalšia otázka",
       viewResultsButton: "Zobraziť výsledky",
       processingButton: "Spracúvam...",
+      timeLeft: "Zostávajúci čas",
+      secondsRemaining_one: "Zostáva {{count}} sekunda",
+      secondsRemaining_few: "Zostávajú {{count}} sekundy",
+      secondsRemaining_other: "Zostáva {{count}} sekúnd",
       // ResultsDisplay
       resultsTitle: "Výsledky kvízu",
       resultsTopicLabel: "Téma: {{topic}}",

@@ -1,10 +1,11 @@
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { QuizQuestion } from '../types';
 
-const MODEL_NAME = "gemini-2.5-flash-preview-04-17";
+// FIX: Updated model name to a stable, recommended version.
+const MODEL_NAME = "gemini-2.5-flash";
 
-export const generateQuizFromTopic = async (topic: string): Promise<QuizQuestion[]> => {
+export const generateQuizFromTopic = async (topic: string, difficulty: string): Promise<QuizQuestion[]> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
     console.error("API key not found. Please set the API_KEY environment variable.");
@@ -13,38 +14,13 @@ export const generateQuizFromTopic = async (topic: string): Promise<QuizQuestion
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `You are an expert quiz generator. Your SOLE task is to output a valid JSON array.
-Create a quiz about the topic: "${topic}".
+  // FIX: Simplified prompt as JSON output is enforced by responseSchema.
+  // UPDATE: Added difficulty to the prompt.
+  const prompt = `You are an expert quiz generator.
+Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.
 The quiz should consist of 5 multiple-choice questions.
 Each question must have exactly 4 unique answer options.
-For each question, clearly identify the correct answer by its text.
-
-The output MUST be a single, valid JSON array of objects. NO OTHER TEXT, MARKDOWN, COMMENTS, OR EXPLANATIONS ARE ALLOWED.
-Your entire response body MUST be ONLY this JSON array.
-The JSON array must start with '[' and end with ']'.
-Each object in the array must represent a question and STRICTLY follow this exact format:
-{
-  "question": "The full text of the question?",
-  "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
-  "correctAnswer": "The text of the correct option, which must be one of a string value present in its 'options' array."
-}
-
-For example, a valid response for a 2-question quiz would be:
-\`\`\`json
-[
-  {
-    "question": "Sample question 1?",
-    "options": ["Option Alpha", "Option Bravo", "Option Charlie", "Option Delta"],
-    "correctAnswer": "Option Alpha"
-  },
-  {
-    "question": "Sample question 2?",
-    "options": ["Option Echo", "Option Foxtrot", "Option Golf", "Option Hotel"],
-    "correctAnswer": "Option Hotel"
-  }
-]
-\`\`\`
-Ensure your output perfectly matches this structure and contains only the JSON.`;
+For each question, clearly identify the correct answer by its text.`;
 
   let jsonStringToParse = ""; 
 
@@ -55,6 +31,30 @@ Ensure your output perfectly matches this structure and contains only the JSON.`
       config: {
         responseMimeType: "application/json",
         temperature: 0.3, // Lowered temperature for more deterministic JSON output
+        // FIX: Added responseSchema to enforce the structure of the JSON output, making it more reliable.
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              question: {
+                type: Type.STRING,
+                description: "The full text of the question.",
+              },
+              options: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.STRING,
+                },
+                description: "An array of exactly 4 unique answer options.",
+              },
+              correctAnswer: {
+                type: Type.STRING,
+                description: "The text of the correct option, which must be one of the strings in the 'options' array.",
+              },
+            },
+          },
+        },
       },
     });
 
@@ -65,13 +65,7 @@ Ensure your output perfectly matches this structure and contains only the JSON.`
 
     jsonStringToParse = response.text.trim();
     
-    const fenceRegex = /```json\s*\n?(.*?)\n?\s*```/s;
-    const fenceMatch = jsonStringToParse.match(fenceRegex);
-
-    if (fenceMatch && fenceMatch[1]) {
-      jsonStringToParse = fenceMatch[1].trim();
-    }
-
+    // FIX: Removed unnecessary markdown fence parsing logic as responseSchema ensures direct JSON output.
     const parsedData = JSON.parse(jsonStringToParse);
 
     if (!Array.isArray(parsedData)) {

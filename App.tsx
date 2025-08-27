@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuizQuestion, QuizState, LeaderboardEntry } from './types';
+import { QuizQuestion, QuizState, LeaderboardEntry, Difficulty } from './types';
 import { generateQuizFromTopic } from './services/geminiService';
 import Header from './components/Header';
 import TopicForm from './components/TopicForm';
@@ -22,13 +22,15 @@ const App: React.FC = () => {
   const [score, setScore] = useState<number>(0);
   const [quizState, setQuizState] = useState<QuizState>(QuizState.IDLE);
   const [error, setError] = useState<string | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
 
-  const handleGenerateQuiz = useCallback(async (currentTopic: string) => {
+  const handleGenerateQuiz = useCallback(async (currentTopic: string, currentDifficulty: Difficulty) => {
     setTopic(currentTopic);
+    setDifficulty(currentDifficulty);
     setQuizState(QuizState.GENERATING);
     setError(null);
     try {
-      const generatedQuestions = await generateQuizFromTopic(currentTopic);
+      const generatedQuestions = await generateQuizFromTopic(currentTopic, currentDifficulty);
       if (generatedQuestions && generatedQuestions.length > 0) {
         setQuestions(generatedQuestions);
         setScore(0); 
@@ -130,7 +132,8 @@ const App: React.FC = () => {
       case QuizState.IDLE:
         return (
           <div className="w-full flex flex-col items-center">
-            <TopicForm onGenerateQuiz={handleGenerateQuiz} isGenerating={quizState === QuizState.GENERATING} />
+            {/* FIX: The comparison 'quizState === QuizState.GENERATING' is always false inside this case block due to type narrowing. Pass 'false' directly. */}
+            <TopicForm onGenerateQuiz={handleGenerateQuiz} isGenerating={false} />
           </div>
         );
       case QuizState.GENERATING:

@@ -16,6 +16,12 @@ export enum QuizState {
   SHOW_LEADERBOARD = 'show_leaderboard', // New state for showing leaderboard
 }
 
+export enum Difficulty {
+  EASY = 'Easy',
+  MEDIUM = 'Medium',
+  HARD = 'Hard',
+}
+
 export interface GroundingChunkWeb {
   uri: string;
   title: string;
