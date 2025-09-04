@@ -20,6 +20,8 @@ import PlayerStatsDisplay from './components/PlayerStatsDisplay';
 import ToastContainer from './components/ToastContainer';
 import TrophyIcon from './components/icons/TrophyIcon';
 import SparklesIcon from './components/icons/SparklesIcon';
+import LinkButton from './components/LinkButton';
+import AchievementsDisplay from './components/AchievementsDisplay';
 
 const PLAYER_NAME_KEY = 'quizMasterPlayerName';
 const SOUND_ENABLED_KEY = 'quizMasterSoundEnabled';
@@ -93,6 +95,12 @@ const App: React.FC = () => {
     try {
       const generatedQuestions = await generateQuizFromTopic(currentTopic, currentDifficulty);
       if (generatedQuestions && generatedQuestions.length > 0) {
+        if (playerName) {
+          const xpForStarting = 10;
+          const { newStats } = addXp(playerName, xpForStarting);
+          setPlayerStats(newStats);
+          addToast(t('xpForStartingQuiz', { xp: xpForStarting }), 'info', <SparklesIcon className="w-5 h-5" />);
+        }
         setQuestions(generatedQuestions);
         setPoints(0); 
         setQuizState(QuizState.IN_PROGRESS);
@@ -106,7 +114,7 @@ const App: React.FC = () => {
       setError(errorMessage); 
       setQuizState(QuizState.ERROR);
     }
-  }, [t]);
+  }, [t, playerName, addToast]);
 
   const submitScoreToLeaderboard = useCallback(async (currentTopic: string, totalPoints: number) => {
     if (!playerName) return;
@@ -167,14 +175,13 @@ const App: React.FC = () => {
         );
       });
       
-      const completionXp = 10;
       const answerXp = correctAnswers * 25;
       const perfectScoreBonus = percentage === 100 ? 500 : 0;
-      const totalXpGained = completionXp + answerXp + perfectScoreBonus;
-      setLastXpGained(totalXpGained);
-
-      const { newStats, leveledUp } = addXp(playerName, totalXpGained);
+      const totalXpGainedFromQuiz = answerXp + perfectScoreBonus;
+      
+      const { newStats, leveledUp, xpGained } = addXp(playerName, totalXpGainedFromQuiz);
       setPlayerStats(newStats);
+      setLastXpGained(xpGained); // Use the final calculated XP including bonuses
 
       if (leveledUp) {
         addToast(
@@ -204,21 +211,13 @@ const App: React.FC = () => {
     setLastXpGained(0);
   }, []);
 
-  const handleViewLeaderboard = () => {
-    setQuizState(QuizState.SHOW_LEADERBOARD);
-  };
-  
-  const handleBackFromLeaderboard = () => {
-    setQuizState(QuizState.IDLE);
-  };
+  const handleViewLeaderboard = () => setQuizState(QuizState.SHOW_LEADERBOARD);
+  const handleBackFromLeaderboard = () => setQuizState(QuizState.IDLE);
+  const handleViewHistory = () => setQuizState(QuizState.SHOW_HISTORY);
+  const handleBackFromHistory = () => setQuizState(QuizState.IDLE);
+  const handleViewAchievements = () => setQuizState(QuizState.SHOW_ACHIEVEMENTS);
+  const handleBackFromAchievements = () => setQuizState(QuizState.IDLE);
 
-  const handleViewHistory = () => {
-    setQuizState(QuizState.SHOW_HISTORY);
-  };
-
-  const handleBackFromHistory = () => {
-    setQuizState(QuizState.IDLE);
-  };
 
   const renderContent = () => {
     switch (quizState) {
@@ -243,6 +242,8 @@ const App: React.FC = () => {
         return <LeaderboardDisplay onBack={handleBackFromLeaderboard} playerName={playerName} />;
       case QuizState.SHOW_HISTORY:
         return <QuizHistoryDisplay onBack={handleBackFromHistory} playerName={playerName} />;
+      case QuizState.SHOW_ACHIEVEMENTS:
+        return <AchievementsDisplay onBack={handleBackFromAchievements} playerName={playerName} />;
       default:
         return <LoadingSpinner />;
     }
@@ -262,9 +263,9 @@ const App: React.FC = () => {
               <div className="mb-2 sm:mb-0 flex flex-col sm:flex-row items-center sm:space-x-4 space-y-2 sm:space-y-0">
                 <div className="flex-shrink-0">
                     <span>{t('playingAs')} <strong>{playerName}</strong></span>
-                    <button onClick={handleChangePlayer} className="ml-2 text-purple-400 hover:text-purple-300 text-xs">
+                    <LinkButton onClick={handleChangePlayer} className="ml-2 text-xs px-1">
                       {t('changePlayer')}
-                    </button>
+                    </LinkButton>
                 </div>
                 {playerStats && <PlayerStatsDisplay stats={playerStats} />}
               </div>
@@ -277,18 +278,24 @@ const App: React.FC = () => {
           <div className="flex items-center space-x-2">
             {quizState === QuizState.IDLE && (
               <>
-                <button
+                <LinkButton
                   onClick={handleViewLeaderboard}
-                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors px-2"
+                  className="text-sm px-3 py-1"
                 >
                   {t('viewLeaderboardButton')}
-                </button>
-                <button
+                </LinkButton>
+                <LinkButton
                   onClick={handleViewHistory}
-                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors px-2"
+                  className="text-sm px-3 py-1"
                 >
                   {t('viewHistoryButton')}
-                </button>
+                </LinkButton>
+                <LinkButton
+                  onClick={handleViewAchievements}
+                  className="text-sm px-3 py-1"
+                >
+                  {t('viewAchievementsButton')}
+                </LinkButton>
               </>
             )}
             <SoundToggle isSoundEnabled={isSoundEnabled} onToggle={handleToggleSound} />

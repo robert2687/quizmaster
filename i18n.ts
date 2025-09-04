@@ -104,6 +104,9 @@ const resources = {
       achievementPerfectionistName: "Perfectionist",
       achievementPerfectionistDescription: "Get a 100% score on a quiz.",
       xpGained: "+{{xp}} XP",
+      xpForStartingQuiz: "+{{xp}} XP for starting the quiz!",
+      viewAchievementsButton: "Achievements",
+      achievementsTitle: "My Achievements",
     },
   },
   sk: {
@@ -208,6 +211,9 @@ const resources = {
       achievementPerfectionistName: "Perfekcionista",
       achievementPerfectionistDescription: "Získajte 100% skóre v kvíze.",
       xpGained: "+{{xp}} XP",
+      xpForStartingQuiz: "+{{xp}} XP za začatie kvízu!",
+      viewAchievementsButton: "Úspechy",
+      achievementsTitle: "Moje Úspechy",
     },
   },
 };

@@ -63,18 +63,31 @@ export const addXp = (playerName: string, amount: number): AddXpResult => {
     return { newStats: { xp: 0, level: 1 }, leveledUp: false, xpGained: 0 };
   }
   const currentStats = getPlayerStats(playerName);
-  const newXp = currentStats.xp + amount;
-  const newLevel = calculateLevelFromXp(newXp);
+  
+  let totalXpGained = amount;
+  let newXp = currentStats.xp + amount;
+  
+  let previousLevel = currentStats.level;
+  let newLevel = calculateLevelFromXp(newXp);
+
+  // If a level up occurs, add bonus XP and re-calculate.
+  // This loop handles multiple level-ups from a single large XP gain.
+  while (newLevel > previousLevel) {
+    const levelsGained = newLevel - previousLevel;
+    const bonusXp = levelsGained * 1000;
+    
+    totalXpGained += bonusXp;
+    newXp += bonusXp;
+
+    previousLevel = newLevel;
+    newLevel = calculateLevelFromXp(newXp);
+  }
+
   const leveledUp = newLevel > currentStats.level;
-
-  const newStats: PlayerStats = {
-    xp: newXp,
-    level: newLevel,
-  };
-
+  const newStats: PlayerStats = { xp: newXp, level: newLevel };
   savePlayerStats(playerName, newStats);
 
-  return { newStats, leveledUp, xpGained: amount };
+  return { newStats, leveledUp, xpGained: totalXpGained };
 };
 
 /**

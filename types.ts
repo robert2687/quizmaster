@@ -15,6 +15,7 @@ export enum QuizState {
   ERROR = 'error',
   SHOW_LEADERBOARD = 'show_leaderboard',
   SHOW_HISTORY = 'show_history',
+  SHOW_ACHIEVEMENTS = 'show_achievements',
 }
 
 export enum Difficulty {
