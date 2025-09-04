@@ -1,19 +1,21 @@
-
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuizQuestion } from '../types';
 import RetryIcon from './icons/RetryIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import XCircleIcon from './icons/XCircleIcon';
+import Confetti from './Confetti';
 
 interface ResultsDisplayProps {
   points: number;
   questions: QuizQuestion[];
   onRestart: () => void;
   quizTopic: string;
+  isSubmittingScore: boolean;
+  xpGained: number;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRestart, quizTopic }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRestart, quizTopic, isSubmittingScore, xpGained }) => {
   const { t } = useTranslation();
   const totalQuestions = questions.length;
   const correctAnswers = questions.filter(q => q.userAnswer === q.correctAnswer).length;
@@ -23,7 +25,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
   let feedbackMessageKey = "";
   let feedbackColor = "text-green-400";
 
-  if (percentage >= 80) {
+  if (percentage === 100) {
+    feedbackMessageKey = "feedbackPerfect"; // Use a new key for a perfect score
+    feedbackColor = "text-green-400";
+  } else if (percentage >= 80) {
     feedbackMessageKey = "feedbackExcellent";
     feedbackColor = "text-green-400";
   } else if (percentage >= 60) {
@@ -55,16 +60,20 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
   };
 
   return (
-    <div className="w-full max-w-2xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">
+    <div className="w-full max-w-2xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl relative z-10">
+      {percentage === 100 && <Confetti />}
       <h2 className="text-3xl md:text-4xl font-extrabold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
         {t('resultsTitle')}
       </h2>
       <p className="text-center text-slate-400 mb-6 text-lg">{t('resultsTopicLabel', { topic: quizTopic })}</p>
       
       <div className="text-center mb-8 p-6 bg-slate-700 rounded-lg">
+        {xpGained > 0 && (
+          <p className="text-lg font-bold text-yellow-400 mb-2 animate-pulse">{t('xpGained', { xp: xpGained })}</p>
+        )}
         <p className={`text-5xl font-bold ${feedbackColor}`}>{t('totalPoints', {points})}</p>
         <p className="text-2xl text-slate-200 mt-1">
-          {t('scoreOutOf', { score: correctAnswers, totalQuestions })}
+          {t('scoreOutOf', { score: correctAnswers, total: totalQuestions })}
         </p>
         <p className={`mt-3 text-lg font-semibold ${feedbackColor}`}>{t(feedbackMessageKey)}</p>
       </div>
@@ -91,8 +100,14 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
           ))}
         </div>
       </div>
+      
+      {isSubmittingScore && (
+        <div className="text-center text-slate-400 my-4 animate-pulse">
+          <p>{t('submittingScore')}</p>
+        </div>
+      )}
 
-      <div className="mt-8 flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
+      <div className="mt-4 flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
         <button
           onClick={onRestart}
           className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-pink-500 transition-colors duration-150 ease-in-out"

@@ -1,4 +1,3 @@
-
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
@@ -58,6 +57,7 @@ const resources = {
       notAnswered: "Not answered",
       correctAnswerLabel: "Correct answer: {{answer}}",
       createNewQuizButton: "Create New Quiz",
+      feedbackPerfect: "Perfect Score! Absolutely flawless!",
       feedbackExcellent: "Excellent work! You're a QuizMaster!",
       feedbackGreat: "Great job! You know your stuff.",
       feedbackGood: "Good effort! Keep learning.",
@@ -65,14 +65,15 @@ const resources = {
       shareScoreButton: "Share My Score",
       copiedButton: "Copied!",
       shareResultsText: "I scored {{points}} points on the \"{{topic}}\" quiz on QuizMaster AI! Beat my score!",
+      submittingScore: "Submitting score to the leaderboard...",
       // QuestionDisplay
       questionLabel: "Question {{current}} of {{total}}",
       // Language Switcher
       switchToEnglish: "English",
       switchToSlovak: "Slovenčina",
       // Leaderboard
-      viewLeaderboardButton: "View Leaderboard",
-      leaderboardTitle: "Local Leaderboard (Top 10)",
+      viewLeaderboardButton: "Online Leaderboard",
+      leaderboardTitle: "Online Leaderboard (Top 10)",
       leaderboardRank: "Rank",
       leaderboardPlayer: "Player",
       leaderboardTopic: "Topic",
@@ -80,6 +81,25 @@ const resources = {
       leaderboardDate: "Date",
       leaderboardNoScores: "No scores recorded yet. Play a quiz to see your name here!",
       backToQuizButton: "Back to Quiz",
+      leaderboardLoading: "Fetching top scores...",
+      leaderboardError: "Could not load the leaderboard. Please try again later.",
+      // History
+      viewHistoryButton: "My History",
+      historyTitle: "My Quiz History",
+      historyDifficulty: "Difficulty",
+      historyScore: "Score",
+      historyNoHistory: "You haven't completed any quizzes yet. Play one to start your history!",
+      // Gamification
+      levelLabel: "Level",
+      xpLabel: "XP",
+      levelUpTitle: "Level Up!",
+      levelUpMessage: "Congratulations! You've reached Level {{level}}!",
+      achievementUnlockedTitle: "Achievement Unlocked!",
+      achievementFirstQuizName: "Quiz Novice",
+      achievementFirstQuizDescription: "Complete your first quiz.",
+      achievementPerfectionistName: "Perfectionist",
+      achievementPerfectionistDescription: "Get a 100% score on a quiz.",
+      xpGained: "+{{xp}} XP",
     },
   },
   sk: {
@@ -137,6 +157,7 @@ const resources = {
       notAnswered: "Nezodpovedané",
       correctAnswerLabel: "Správna odpoveď: {{answer}}",
       createNewQuizButton: "Vytvoriť nový kvíz",
+      feedbackPerfect: "Perfektné skóre! Absolútne bezchybné!",
       feedbackExcellent: "Výborná práca! Ste QuizMaster!",
       feedbackGreat: "Skvelá práca! Viete svoje.",
       feedbackGood: "Dobrý pokus! Pokračujte v učení.",
@@ -144,14 +165,15 @@ const resources = {
       shareScoreButton: "Zdieľať moje skóre",
       copiedButton: "Skopírované!",
       shareResultsText: "Získal/a som {{points}} bodov v kvíze na tému \"{{topic}}\" v QuizMaster AI! Prekonaj ma!",
+      submittingScore: "Odosielam skóre do rebríčka...",
       // QuestionDisplay
       questionLabel: "Otázka {{current}} z {{total}}",
       // Language Switcher
       switchToEnglish: "Angličtina",
       switchToSlovak: "Slovenčina",
       // Leaderboard
-      viewLeaderboardButton: "Zobraziť Rebríček",
-      leaderboardTitle: "Miestny Rebríček (Top 10)",
+      viewLeaderboardButton: "Online Rebríček",
+      leaderboardTitle: "Online Rebríček (Top 10)",
       leaderboardRank: "Poradie",
       leaderboardPlayer: "Hráč",
       leaderboardTopic: "Téma",
@@ -159,6 +181,25 @@ const resources = {
       leaderboardDate: "Dátum",
       leaderboardNoScores: "Zatiaľ žiadne zaznamenané skóre. Zahrajte si kvíz a zapíšte sa!",
       backToQuizButton: "Späť na Kvíz",
+      leaderboardLoading: "Načítavam najlepšie skóre...",
+      leaderboardError: "Nepodarilo sa načítať rebríček. Skúste to prosím neskôr.",
+      // History
+      viewHistoryButton: "Moja História",
+      historyTitle: "Moja História Kvízov",
+      historyDifficulty: "Náročnosť",
+      historyScore: "Skóre",
+      historyNoHistory: "Zatiaľ ste nedokončili žiadne kvízy. Zahrajte si jeden a začnite svoju históriu!",
+      // Gamification
+      levelLabel: "Úroveň",
+      xpLabel: "XP",
+      levelUpTitle: "Nová Úroveň!",
+      levelUpMessage: "Gratulujeme! Dosiahli ste úroveň {{level}}!",
+      achievementUnlockedTitle: "Úspech Odomknutý!",
+      achievementFirstQuizName: "Kvízový Nováčik",
+      achievementFirstQuizDescription: "Dokončite svoj prvý kvíz.",
+      achievementPerfectionistName: "Perfekcionista",
+      achievementPerfectionistDescription: "Získajte 100% skóre v kvíze.",
+      xpGained: "+{{xp}} XP",
     },
   },
 };

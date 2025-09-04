@@ -15,10 +15,24 @@ interface QuizFlowProps {
   isSoundEnabled: boolean;
 }
 
-const TIME_PER_QUESTION = 20; // 20 seconds per question
+const getTimeForDifficulty = (difficulty: Difficulty): number => {
+  switch (difficulty) {
+    case Difficulty.EASY:
+      return 25;
+    case Difficulty.MEDIUM:
+      return 20;
+    case Difficulty.HARD:
+      return 15;
+    default:
+      return 20; // Default to medium
+  }
+};
+
 
 const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopic, difficulty, isSoundEnabled }) => {
   const { t } = useTranslation();
+  const timePerQuestion = getTimeForDifficulty(difficulty);
+
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [totalPoints, setTotalPoints] = useState<number>(0);
   const [selectedOption, setSelectedOption] = useState<string | undefined>(undefined);
@@ -26,7 +40,7 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
     questions.map(q => ({ ...q, userAnswer: undefined }))
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
+  const [timeLeft, setTimeLeft] = useState(timePerQuestion);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentQuestion = answeredQuestions[currentIndex];
@@ -42,10 +56,12 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
     
     playSound(isCorrect ? 'correct' : 'incorrect', isSoundEnabled);
 
+    const pointsThisTurn = isCorrect
+      ? (difficulty === Difficulty.EASY ? 10 : difficulty === Difficulty.MEDIUM ? 20 : 30) + timeLeft
+      : 0;
+
     if (isCorrect) {
-      const basePoints = difficulty === Difficulty.EASY ? 10 : difficulty === Difficulty.MEDIUM ? 20 : 30;
-      const timeBonus = timeLeft;
-      setTotalPoints(prev => prev + basePoints + timeBonus);
+      setTotalPoints(prev => prev + pointsThisTurn);
     }
 
     const updatedQuestion = { ...currentQuestion, userAnswer: answer };
@@ -59,14 +75,11 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
             setSelectedOption(undefined);
             setIsSubmitting(false);
         } else {
-            // Recalculate final points to ensure state consistency on the last question
-            const finalPoints = isCorrect 
-                ? totalPoints + (difficulty === Difficulty.EASY ? 10 : difficulty === Difficulty.MEDIUM ? 20 : 30) + timeLeft 
-                : totalPoints;
             playSound('complete', isSoundEnabled);
-            onQuizComplete(finalPoints, newAnsweredQuestions);
+            // Use totalPoints (from before this question) + pointsThisTurn to get final score
+            onQuizComplete(totalPoints + pointsThisTurn, newAnsweredQuestions);
         }
-    }, 1200); // Increased delay to allow user to see feedback
+    }, 1200);
   }, [answeredQuestions, currentIndex, currentQuestion, totalPoints, onQuizComplete, questions.length, difficulty, timeLeft, isSoundEnabled]);
 
   // Effect to manage the timer lifecycle
@@ -75,7 +88,7 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
 
     if (timerRef.current) clearInterval(timerRef.current);
     
-    setTimeLeft(TIME_PER_QUESTION);
+    setTimeLeft(timePerQuestion);
 
     timerRef.current = setInterval(() => {
         setTimeLeft(prevTime => {
@@ -94,7 +107,7 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
     return () => { // Cleanup
         if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [currentIndex, isSubmitting, handleNextStep, isSoundEnabled]);
+  }, [currentIndex, isSubmitting, handleNextStep, isSoundEnabled, timePerQuestion]);
 
 
   const handleOptionSelect = (option: string) => {
@@ -116,7 +129,7 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
       <h2 className="text-2xl md:text-3xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
         {t('quizFlowTitle', { topic: quizTopic })}
       </h2>
-      <Timer timeLeft={timeLeft} totalTime={TIME_PER_QUESTION} />
+      <Timer timeLeft={timeLeft} totalTime={timePerQuestion} />
       <ProgressBar current={currentIndex + 1} total={questions.length} />
       <QuestionDisplay
         question={currentQuestion}

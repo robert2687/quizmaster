@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,7 +24,9 @@ const Timer: React.FC<TimerProps> = ({ timeLeft, totalTime }) => {
     <div className="w-full my-4 md:my-5" aria-live="polite" aria-atomic="true">
       <div className="flex justify-between items-center mb-1 text-xs sm:text-sm">
         <span className="font-semibold text-slate-300">{t('timeLeft')}</span>
-        <span className="font-bold text-slate-100 tabular-nums">{t('secondsRemaining', { count: timeLeft })}</span>
+        <span className={`font-bold tabular-nums transition-colors ${timeLeft <= 5 ? 'text-red-400 animate-pulse' : 'text-slate-100'}`}>
+          {t('secondsRemaining', { count: timeLeft })}
+        </span>
       </div>
       <div className="w-full bg-slate-700 rounded-full h-2.5">
         <div

@@ -1,8 +1,10 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuizQuestion, QuizState, LeaderboardEntry, Difficulty } from './types';
+import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, Achievement } from './types';
 import { generateQuizFromTopic } from './services/geminiService';
+import { postScore } from './services/leaderboardService';
+import { getPlayerStats, addXp } from './services/playerStatsService';
+import { checkAndUnlockAchievements } from './services/achievementsService';
 import Header from './components/Header';
 import TopicForm from './components/TopicForm';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -12,12 +14,16 @@ import ResultsDisplay from './components/ResultsDisplay';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import LeaderboardDisplay from './components/LeaderboardDisplay';
 import PlayerNameSetup from './components/PlayerNameSetup';
-import SoundToggle from './components/SoundToggle'; // Import the new component
+import SoundToggle from './components/SoundToggle';
+import QuizHistoryDisplay from './components/QuizHistoryDisplay';
+import PlayerStatsDisplay from './components/PlayerStatsDisplay';
+import ToastContainer from './components/ToastContainer';
+import TrophyIcon from './components/icons/TrophyIcon';
+import SparklesIcon from './components/icons/SparklesIcon';
 
-const LEADERBOARD_KEY = 'quizMasterLeaderboard';
 const PLAYER_NAME_KEY = 'quizMasterPlayerName';
 const SOUND_ENABLED_KEY = 'quizMasterSoundEnabled';
-const MAX_LEADERBOARD_ENTRIES = 10;
+const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
 
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -25,19 +31,35 @@ const App: React.FC = () => {
   const [topic, setTopic] = useState<string>('');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [points, setPoints] = useState<number>(0);
-  const [quizState, setQuizState] = useState<QuizState>(QuizState.GENERATING); // Start in a loading-like state
+  const [quizState, setQuizState] = useState<QuizState>(QuizState.GENERATING);
   const [error, setError] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
+  const [isSubmittingScore, setIsSubmittingScore] = useState<boolean>(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => {
     const storedValue = localStorage.getItem(SOUND_ENABLED_KEY);
-    return storedValue !== 'false'; // Default to true if not set or is 'true'
+    return storedValue !== 'false';
   });
+  const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [lastXpGained, setLastXpGained] = useState<number>(0);
+
+  const addToast = useCallback((message: string, type: 'success' | 'info', icon?: React.ReactNode) => {
+    const id = crypto.randomUUID();
+    setToasts(prev => [...prev, { id, message, type, icon }]);
+    setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  }, []);
+
+  const dismissToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
 
   useEffect(() => {
-    // On initial load, check for an existing player name
     const storedPlayerName = localStorage.getItem(PLAYER_NAME_KEY);
     if (storedPlayerName) {
       setPlayerName(storedPlayerName);
+      setPlayerStats(getPlayerStats(storedPlayerName));
       setQuizState(QuizState.IDLE);
     } else {
       setQuizState(QuizState.PLAYER_SETUP);
@@ -55,13 +77,13 @@ const App: React.FC = () => {
   const handleSetPlayerName = (name: string) => {
     setPlayerName(name);
     localStorage.setItem(PLAYER_NAME_KEY, name);
+    setPlayerStats(getPlayerStats(name));
     setQuizState(QuizState.IDLE);
   };
   
   const handleChangePlayer = () => {
       setQuizState(QuizState.PLAYER_SETUP);
   };
-
 
   const handleGenerateQuiz = useCallback(async (currentTopic: string, currentDifficulty: Difficulty) => {
     setTopic(currentTopic);
@@ -86,39 +108,92 @@ const App: React.FC = () => {
     }
   }, [t]);
 
-  const saveScoreToLeaderboard = useCallback((currentTopic: string, totalPoints: number) => {
+  const submitScoreToLeaderboard = useCallback(async (currentTopic: string, totalPoints: number) => {
     if (!playerName) return;
-
-    const newEntry: LeaderboardEntry = {
-      id: crypto.randomUUID(),
-      playerName,
-      topic: currentTopic,
-      points: totalPoints,
-      timestamp: Date.now(),
-    };
-
+    setIsSubmittingScore(true);
     try {
-      const storedLeaderboard = localStorage.getItem(LEADERBOARD_KEY);
-      let leaderboard: LeaderboardEntry[] = storedLeaderboard ? JSON.parse(storedLeaderboard) : [];
-      
-      leaderboard.push(newEntry);
-      leaderboard.sort((a, b) => b.points - a.points || b.timestamp - a.timestamp);
-
-      leaderboard = leaderboard.slice(0, MAX_LEADERBOARD_ENTRIES);
-      localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
+      await postScore({
+        playerName,
+        topic: currentTopic,
+        points: totalPoints,
+      });
     } catch (e) {
-      console.error("Failed to save score to leaderboard:", e);
+      console.error("Failed to submit score:", e);
+    } finally {
+      setIsSubmittingScore(false);
     }
   }, [playerName]);
 
+  const saveQuizToHistory = useCallback((currentTopic: string, totalPoints: number, answeredQuestions: QuizQuestion[]) => {
+    if (!playerName) return;
+    const correctAnswers = answeredQuestions.filter(q => q.userAnswer === q.correctAnswer).length;
+    const totalQuestions = answeredQuestions.length;
+    const newEntry: QuizHistoryEntry = {
+      id: crypto.randomUUID(),
+      topic: currentTopic,
+      points: totalPoints,
+      timestamp: Date.now(),
+      difficulty: difficulty,
+      correctAnswers: correctAnswers,
+      totalQuestions: totalQuestions,
+    };
+    try {
+      const historyKey = `${HISTORY_KEY_PREFIX}${playerName}`;
+      const storedHistory = localStorage.getItem(historyKey);
+      let history: QuizHistoryEntry[] = storedHistory ? JSON.parse(storedHistory) : [];
+      history.unshift(newEntry);
+      localStorage.setItem(historyKey, JSON.stringify(history));
+    } catch (e) {
+      console.error("Failed to save quiz to history:", e);
+    }
+  }, [playerName, difficulty]);
+
   const handleQuizComplete = useCallback((totalPoints: number, answeredQuestions: QuizQuestion[]) => {
+    const correctAnswers = answeredQuestions.filter(q => q.userAnswer === q.correctAnswer).length;
+    const totalQuestions = answeredQuestions.length;
+    const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+    if (playerName) {
+      const newAchievements = checkAndUnlockAchievements({
+        playerName,
+        correctAnswers,
+        totalQuestions,
+      });
+      newAchievements.forEach(ach => {
+        addToast(
+          `${t('achievementUnlockedTitle')} ${t(ach.nameKey)}`,
+          'success',
+          <TrophyIcon className="w-6 h-6" />
+        );
+      });
+      
+      const completionXp = 10;
+      const answerXp = correctAnswers * 25;
+      const perfectScoreBonus = percentage === 100 ? 500 : 0;
+      const totalXpGained = completionXp + answerXp + perfectScoreBonus;
+      setLastXpGained(totalXpGained);
+
+      const { newStats, leveledUp } = addXp(playerName, totalXpGained);
+      setPlayerStats(newStats);
+
+      if (leveledUp) {
+        addToast(
+          `${t('levelUpTitle')} ${t('levelUpMessage', { level: newStats.level })}`,
+          'success',
+          <SparklesIcon className="w-6 h-6" />
+        );
+      }
+    }
+
     setPoints(totalPoints);
     setQuestions(answeredQuestions); 
     setQuizState(QuizState.COMPLETED);
+
     if (topic && answeredQuestions.length > 0) {
-      saveScoreToLeaderboard(topic, totalPoints);
+      submitScoreToLeaderboard(topic, totalPoints);
+      saveQuizToHistory(topic, totalPoints, answeredQuestions);
     }
-  }, [topic, saveScoreToLeaderboard]);
+  }, [topic, submitScoreToLeaderboard, saveQuizToHistory, playerName, addToast, t]);
 
   const handleRestart = useCallback(() => {
     setTopic('');
@@ -126,6 +201,7 @@ const App: React.FC = () => {
     setPoints(0);
     setError(null);
     setQuizState(QuizState.IDLE);
+    setLastXpGained(0);
   }, []);
 
   const handleViewLeaderboard = () => {
@@ -133,6 +209,14 @@ const App: React.FC = () => {
   };
   
   const handleBackFromLeaderboard = () => {
+    setQuizState(QuizState.IDLE);
+  };
+
+  const handleViewHistory = () => {
+    setQuizState(QuizState.SHOW_HISTORY);
+  };
+
+  const handleBackFromHistory = () => {
     setQuizState(QuizState.IDLE);
   };
 
@@ -147,52 +231,65 @@ const App: React.FC = () => {
           </div>
         );
       case QuizState.GENERATING:
-         // Only show topic if it's set, otherwise show default
         const message = topic ? t('loadingMessageTopic', { topic }) : t('loadingMessageDefault');
         return <LoadingSpinner message={message} />;
       case QuizState.IN_PROGRESS:
         return <QuizFlow questions={questions} onQuizComplete={handleQuizComplete} quizTopic={topic} difficulty={difficulty} isSoundEnabled={isSoundEnabled} />;
       case QuizState.COMPLETED:
-        return <ResultsDisplay points={points} questions={questions} onRestart={handleRestart} quizTopic={topic} />;
+        return <ResultsDisplay points={points} questions={questions} onRestart={handleRestart} quizTopic={topic} isSubmittingScore={isSubmittingScore} xpGained={lastXpGained} />;
       case QuizState.ERROR:
         return <ErrorDisplay message={error || "An unknown error occurred."} onRetry={handleRestart} />;
       case QuizState.SHOW_LEADERBOARD:
-        return <LeaderboardDisplay onBack={handleBackFromLeaderboard} />;
+        return <LeaderboardDisplay onBack={handleBackFromLeaderboard} playerName={playerName} />;
+      case QuizState.SHOW_HISTORY:
+        return <QuizHistoryDisplay onBack={handleBackFromHistory} playerName={playerName} />;
       default:
-        return <LoadingSpinner />; // Default loading state
+        return <LoadingSpinner />;
     }
   };
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-start py-8 px-4">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <Header />
       <main className="w-full flex-grow flex items-center justify-center mt-4 md:mt-0">
         {renderContent()}
       </main>
-      <footer className="text-center py-4 mt-auto w-full max-w-3xl mx-auto">
+      <footer className="text-center py-4 mt-auto w-full max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-slate-500 flex-grow">
              {playerName && quizState !== QuizState.PLAYER_SETUP && (
-              <div className="mb-2 sm:mb-0">
-                <span>{t('playingAs')} <strong>{playerName}</strong></span>
-                <button onClick={handleChangePlayer} className="ml-2 text-purple-400 hover:text-purple-300 text-xs">
-                  {t('changePlayer')}
-                </button>
+              <div className="mb-2 sm:mb-0 flex flex-col sm:flex-row items-center sm:space-x-4 space-y-2 sm:space-y-0">
+                <div className="flex-shrink-0">
+                    <span>{t('playingAs')} <strong>{playerName}</strong></span>
+                    <button onClick={handleChangePlayer} className="ml-2 text-purple-400 hover:text-purple-300 text-xs">
+                      {t('changePlayer')}
+                    </button>
+                </div>
+                {playerStats && <PlayerStatsDisplay stats={playerStats} />}
               </div>
             )}
-            <p>
+            <p className="mt-2 text-center sm:text-left">
               {t('poweredBy')} &copy; {new Date().getFullYear()} {t('footerRights')}.
             </p>
           </div>
 
           <div className="flex items-center space-x-2">
             {quizState === QuizState.IDLE && (
-              <button
-                onClick={handleViewLeaderboard}
-                className="text-sm text-purple-400 hover:text-purple-300 transition-colors px-2"
-              >
-                {t('viewLeaderboardButton')}
-              </button>
+              <>
+                <button
+                  onClick={handleViewLeaderboard}
+                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors px-2"
+                >
+                  {t('viewLeaderboardButton')}
+                </button>
+                <button
+                  onClick={handleViewHistory}
+                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors px-2"
+                >
+                  {t('viewHistoryButton')}
+                </button>
+              </>
             )}
             <SoundToggle isSoundEnabled={isSoundEnabled} onToggle={handleToggleSound} />
             <LanguageSwitcher />

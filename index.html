@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,6 +23,21 @@
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #64748b; /* slate-500 */
+      }
+
+      /* Animation for toast notifications */
+      @keyframes toast-in {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .animate-toast-in {
+        animation: toast-in 0.5s ease-out forwards;
       }
     </style>
 <script type="importmap">
