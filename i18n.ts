@@ -73,7 +73,7 @@ const resources = {
       switchToSlovak: "Slovenčina",
       // Leaderboard
       viewLeaderboardButton: "Online Leaderboard",
-      leaderboardTitle: "Online Leaderboard (Top 10)",
+      leaderboardTitle: "Online Leaderboard",
       leaderboardRank: "Rank",
       leaderboardPlayer: "Player",
       leaderboardTopic: "Topic",
@@ -83,6 +83,10 @@ const resources = {
       backToQuizButton: "Back to Quiz",
       leaderboardLoading: "Fetching top scores...",
       leaderboardError: "Could not load the leaderboard. Please try again later.",
+      leaderboardThisWeek: "This Week",
+      leaderboardAllTime: "All-Time",
+      leaderboardFilterByTopic: "Filter by topic...",
+      clearFilter: "Clear filter",
       // History
       viewHistoryButton: "My History",
       historyTitle: "My Quiz History",
@@ -173,7 +177,7 @@ const resources = {
       switchToSlovak: "Slovenčina",
       // Leaderboard
       viewLeaderboardButton: "Online Rebríček",
-      leaderboardTitle: "Online Rebríček (Top 10)",
+      leaderboardTitle: "Online Rebríček",
       leaderboardRank: "Poradie",
       leaderboardPlayer: "Hráč",
       leaderboardTopic: "Téma",
@@ -183,6 +187,10 @@ const resources = {
       backToQuizButton: "Späť na Kvíz",
       leaderboardLoading: "Načítavam najlepšie skóre...",
       leaderboardError: "Nepodarilo sa načítať rebríček. Skúste to prosím neskôr.",
+      leaderboardThisWeek: "Tento týždeň",
+      leaderboardAllTime: "Všetky časy",
+      leaderboardFilterByTopic: "Filtrovať podľa témy...",
+      clearFilter: "Vyčistiť filter",
       // History
       viewHistoryButton: "Moja História",
       historyTitle: "Moja História Kvízov",

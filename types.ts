@@ -40,6 +40,11 @@ export interface LeaderboardEntry {
   timestamp: number; // Unix timestamp
 }
 
+export interface LeaderboardFilters {
+  season: 'weekly' | 'all-time';
+  topic: string;
+}
+
 export interface QuizHistoryEntry {
   id:string;
   topic: string;

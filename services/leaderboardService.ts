@@ -1,7 +1,6 @@
-import { LeaderboardEntry } from '../types';
+import { LeaderboardEntry, LeaderboardFilters } from '../types';
 
 const LEADERBOARD_KEY = 'quizMasterLeaderboard';
-const MAX_LEADERBOARD_ENTRIES = 10;
 const SIMULATED_DELAY = 500; // ms to simulate network latency
 
 /**
@@ -23,16 +22,49 @@ const fakeFetch = <T>(data: T, fail: boolean = false): Promise<T> => {
 };
 
 /**
- * Fetches the leaderboard data.
+ * Calculates the timestamp for the start of the current week (Monday).
+ * This defines the start of the "weekly season".
+ * @returns The Unix timestamp for the start of the week.
+ */
+const getSeasonStartDate = (): number => {
+    const now = new Date();
+    // getDay() returns 0 for Sunday, 1 for Monday, etc.
+    const dayOfWeek = now.getDay();
+    // Calculate the difference to the last Monday. If today is Sunday (0), go back 6 days. Otherwise, go back (dayOfWeek - 1) days.
+    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0, 0, 0, 0); // Set to the very beginning of Monday.
+    return monday.getTime();
+}
+
+/**
+ * Fetches the leaderboard data, with optional filtering.
  * @returns A promise that resolves with an array of leaderboard entries.
  */
-export const getLeaderboard = async (): Promise<LeaderboardEntry[]> => {
+export const getLeaderboard = async (filters: LeaderboardFilters): Promise<LeaderboardEntry[]> => {
   try {
     const storedLeaderboard = localStorage.getItem(LEADERBOARD_KEY);
     const leaderboard: LeaderboardEntry[] = storedLeaderboard ? JSON.parse(storedLeaderboard) : [];
     
+    let filteredData = leaderboard;
+
+    // Apply season filter
+    if (filters.season === 'weekly') {
+        const seasonStart = getSeasonStartDate();
+        filteredData = filteredData.filter(entry => entry.timestamp >= seasonStart);
+    }
+
+    // Apply topic filter
+    if (filters.topic && filters.topic.trim() !== '') {
+        const lowercasedTopic = filters.topic.toLowerCase();
+        filteredData = filteredData.filter(entry => entry.topic.toLowerCase().includes(lowercasedTopic));
+    }
+
+    // Sort by points (desc), then by timestamp (desc) to break ties
+    filteredData.sort((a, b) => b.points - a.points || b.timestamp - a.timestamp);
+    
     // Simulate fetching from an API
-    return await fakeFetch(leaderboard);
+    return await fakeFetch(filteredData);
   } catch (e) {
     console.error("Failed to get leaderboard:", e);
     throw new Error("Could not retrieve leaderboard data.");
@@ -56,11 +88,9 @@ export const postScore = async (newEntry: Omit<LeaderboardEntry, 'id' | 'timesta
     let leaderboard: LeaderboardEntry[] = storedLeaderboard ? JSON.parse(storedLeaderboard) : [];
     
     leaderboard.push(entryWithMetadata);
-    // Sort by points (desc), then by timestamp (desc) to break ties
-    leaderboard.sort((a, b) => b.points - a.points || b.timestamp - a.timestamp);
-    // Keep only the top entries
-    leaderboard = leaderboard.slice(0, MAX_LEADERBOARD_ENTRIES);
-
+    
+    // Leaderboard is sorted on fetch, but we can do a simple save here.
+    // In a real DB, you'd just insert.
     localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
 
     // Simulate posting to an API
