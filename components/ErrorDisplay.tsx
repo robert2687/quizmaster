@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import RetryIcon from './icons/RetryIcon';
+import Button from './Button';
 
 interface ErrorDisplayProps {
   message: string;
@@ -17,13 +17,13 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ message, onRetry }) => {
       </svg>
       <h3 className="text-2xl font-semibold text-red-400 mb-3">{t('errorTitle')}</h3>
       <p className="text-slate-300 mb-6 whitespace-pre-wrap">{message}</p>
-      <button
+      <Button
         onClick={onRetry}
-        className="flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-red-500 transition-colors duration-150 ease-in-out"
+        variant="danger"
       >
         <RetryIcon className="w-5 h-5 mr-2" />
         {t('tryAgainButton')}
-      </button>
+      </Button>
     </div>
   );
 };

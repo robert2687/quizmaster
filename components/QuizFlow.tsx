@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuizQuestion, Difficulty } from '../types';
 import QuestionDisplay from './QuestionDisplay';
 import ProgressBar from './ProgressBar';
 import Timer from './Timer';
+import Button from './Button';
 import { playSound } from '../services/soundService';
 
 interface QuizFlowProps {
@@ -139,15 +139,16 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
         totalQuestions={questions.length}
         showAnswer={isSubmitting}
       />
-      <button
+      <Button
         onClick={handleSubmitAnswer}
         disabled={!selectedOption || isSubmitting}
-        className="mt-6 md:mt-8 w-full px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-teal-500 transition-all duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+        variant="secondary"
+        className="mt-6 md:mt-8 w-full"
       >
         {isSubmitting 
           ? t('processingButton') 
           : (currentIndex < questions.length - 1 ? t('nextQuestionButton') : t('viewResultsButton'))}
-      </button>
+      </Button>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { LeaderboardEntry, LeaderboardFilters } from '../types';
 import { getLeaderboard } from '../services/leaderboardService';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorDisplay from './ErrorDisplay'; // Re-use the ErrorDisplay component
+import Button from './Button';
 
 interface LeaderboardDisplayProps {
   onBack: () => void;
@@ -177,12 +178,9 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, playerN
       {renderContent()}
       
       <div className="mt-8 flex justify-end">
-        <button
-          onClick={onBack}
-          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-pink-500 transition-colors duration-150 ease-in-out"
-        >
+        <Button onClick={onBack}>
           {t('backToQuizButton')}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import RetryIcon from './icons/RetryIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import XCircleIcon from './icons/XCircleIcon';
 import Confetti from './Confetti';
+import Button from './Button';
 
 interface ResultsDisplayProps {
   points: number;
@@ -108,17 +109,18 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
       )}
 
       <div className="mt-4 flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
-        <button
+        <Button
           onClick={onRestart}
-          className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-pink-500 transition-colors duration-150 ease-in-out"
+          className="w-full"
         >
           <RetryIcon className="w-5 h-5 mr-2" />
           {t('createNewQuizButton')}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={handleShareResults}
           disabled={shareStatus === 'copied'}
-          className="w-full flex items-center justify-center px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-cyan-500 transition-all duration-150 ease-in-out disabled:opacity-70 disabled:cursor-not-allowed"
+          variant="share"
+          className="w-full"
         >
           {shareStatus === 'copied' ? (
             <>
@@ -133,7 +135,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
               {t('shareScoreButton')}
             </>
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );
