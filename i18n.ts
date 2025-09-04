@@ -10,8 +10,18 @@ const resources = {
       appName: "QuizMaster AI",
       footerRights: "QuizMaster AI",
       poweredBy: "Powered by Gemini AI.",
+      playingAs: "Playing as:",
+      changePlayer: "(Change)",
+      soundOn: "Enable sound effects",
+      soundOff: "Disable sound effects",
       // Header
       headerSubtitle: "Generate engaging quizzes on any topic in seconds!",
+      // PlayerNameSetup
+      welcomeTitle: "Welcome to QuizMaster AI!",
+      welcomeSubtitle: "Enter your player name to get on the leaderboard.",
+      playerNameLabel: "Player Name",
+      playerNamePlaceholder: "Enter your name...",
+      letsPlayButton: "Let's Play!",
       // TopicForm
       topicFormTitle: "Enter a topic to start your quiz:", 
       topicFormLabel: "Enter a topic (e.g., \"Roman History\", \"Quantum Physics Basics\")",
@@ -41,7 +51,8 @@ const resources = {
       resultsTitle: "Quiz Results",
       resultsTopicLabel: "Topic: {{topic}}",
       scorePercentage: "{{percentage}}%",
-      scoreOutOf: "You scored {{score}} out of {{totalQuestions}}",
+      totalPoints: "{{points}} Points",
+      scoreOutOf: "You answered {{score}} out of {{totalQuestions}} correctly",
       reviewAnswersTitle: "Review Your Answers:",
       yourAnswerLabel: "Your answer: {{answer}}",
       notAnswered: "Not answered",
@@ -53,7 +64,7 @@ const resources = {
       feedbackKeepTrying: "Keep trying! Practice makes perfect.",
       shareScoreButton: "Share My Score",
       copiedButton: "Copied!",
-      shareResultsText: "I scored {{score}}/{{totalQuestions}} ({{percentage}}%) on the \"{{topic}}\" quiz on QuizMaster AI! Beat my score!",
+      shareResultsText: "I scored {{points}} points on the \"{{topic}}\" quiz on QuizMaster AI! Beat my score!",
       // QuestionDisplay
       questionLabel: "Question {{current}} of {{total}}",
       // Language Switcher
@@ -63,12 +74,12 @@ const resources = {
       viewLeaderboardButton: "View Leaderboard",
       leaderboardTitle: "Local Leaderboard (Top 10)",
       leaderboardRank: "Rank",
+      leaderboardPlayer: "Player",
       leaderboardTopic: "Topic",
-      leaderboardScore: "Score",
+      leaderboardPoints: "Points",
       leaderboardDate: "Date",
       leaderboardNoScores: "No scores recorded yet. Play a quiz to see your name here!",
       backToQuizButton: "Back to Quiz",
-      leaderboardPlayer: "Player", // Default player name
     },
   },
   sk: {
@@ -77,8 +88,18 @@ const resources = {
       appName: "QuizMaster AI",
       footerRights: "QuizMaster AI",
       poweredBy: "Vytvorené s Gemini AI.",
+      playingAs: "Hráš ako:",
+      changePlayer: "(Zmeniť)",
+      soundOn: "Zapnúť zvukové efekty",
+      soundOff: "Vypnúť zvukové efekty",
       // Header
       headerSubtitle: "Vytvárajte pútavé kvízy na akúkoľvek tému v priebehu sekúnd!",
+      // PlayerNameSetup
+      welcomeTitle: "Vitajte v QuizMaster AI!",
+      welcomeSubtitle: "Zadajte svoje meno hráča, aby ste sa dostali do rebríčka.",
+      playerNameLabel: "Meno hráča",
+      playerNamePlaceholder: "Zadajte svoje meno...",
+      letsPlayButton: "Poďme hrať!",
       // TopicForm
       topicFormTitle: "Zadajte tému na spustenie kvízu:", 
       topicFormLabel: "Zadajte tému (napr. \"Rímska história\", \"Základy kvantovej fyziky\")",
@@ -109,7 +130,8 @@ const resources = {
       resultsTitle: "Výsledky kvízu",
       resultsTopicLabel: "Téma: {{topic}}",
       scorePercentage: "{{percentage}}%",
-      scoreOutOf: "Získali ste {{score}} z {{totalQuestions}} bodov",
+      totalPoints: "{{points}} bodov",
+      scoreOutOf: "Odpovedali ste správne na {{score}} z {{totalQuestions}} otázok",
       reviewAnswersTitle: "Skontrolujte si odpovede:",
       yourAnswerLabel: "Vaša odpoveď: {{answer}}",
       notAnswered: "Nezodpovedané",
@@ -121,7 +143,7 @@ const resources = {
       feedbackKeepTrying: "Skúšajte ďalej! Prax robí majstra.",
       shareScoreButton: "Zdieľať moje skóre",
       copiedButton: "Skopírované!",
-      shareResultsText: "Získal/a som {{score}}/{{totalQuestions}} ({{percentage}}%) v kvíze na tému \"{{topic}}\" v QuizMaster AI! Prekonaj ma!",
+      shareResultsText: "Získal/a som {{points}} bodov v kvíze na tému \"{{topic}}\" v QuizMaster AI! Prekonaj ma!",
       // QuestionDisplay
       questionLabel: "Otázka {{current}} z {{total}}",
       // Language Switcher
@@ -131,12 +153,12 @@ const resources = {
       viewLeaderboardButton: "Zobraziť Rebríček",
       leaderboardTitle: "Miestny Rebríček (Top 10)",
       leaderboardRank: "Poradie",
+      leaderboardPlayer: "Hráč",
       leaderboardTopic: "Téma",
-      leaderboardScore: "Skóre",
+      leaderboardPoints: "Body",
       leaderboardDate: "Dátum",
       leaderboardNoScores: "Zatiaľ žiadne zaznamenané skóre. Zahrajte si kvíz a zapíšte sa!",
       backToQuizButton: "Späť na Kvíz",
-      leaderboardPlayer: "Hráč",
     },
   },
 };

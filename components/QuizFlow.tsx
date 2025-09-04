@@ -1,30 +1,33 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuizQuestion } from '../types';
+import { QuizQuestion, Difficulty } from '../types';
 import QuestionDisplay from './QuestionDisplay';
 import ProgressBar from './ProgressBar';
-import Timer from './Timer'; // Import the new Timer component
+import Timer from './Timer';
+import { playSound } from '../services/soundService';
 
 interface QuizFlowProps {
   questions: QuizQuestion[];
-  onQuizComplete: (finalScore: number, answeredQuestions: QuizQuestion[]) => void;
+  onQuizComplete: (totalPoints: number, answeredQuestions: QuizQuestion[]) => void;
   quizTopic: string;
+  difficulty: Difficulty;
+  isSoundEnabled: boolean;
 }
 
 const TIME_PER_QUESTION = 20; // 20 seconds per question
 
-const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopic }) => {
+const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopic, difficulty, isSoundEnabled }) => {
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [currentScore, setCurrentScore] = useState<number>(0);
+  const [totalPoints, setTotalPoints] = useState<number>(0);
   const [selectedOption, setSelectedOption] = useState<string | undefined>(undefined);
   const [answeredQuestions, setAnsweredQuestions] = useState<QuizQuestion[]>(
     questions.map(q => ({ ...q, userAnswer: undefined }))
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
-  // FIX: Use ReturnType<typeof setTimeout> for timer ref to be environment-agnostic (browser/Node.js).
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentQuestion = answeredQuestions[currentIndex];
 
@@ -37,8 +40,12 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
 
     const isCorrect = answer === currentQuestion.correctAnswer;
     
+    playSound(isCorrect ? 'correct' : 'incorrect', isSoundEnabled);
+
     if (isCorrect) {
-      setCurrentScore(prev => prev + 1);
+      const basePoints = difficulty === Difficulty.EASY ? 10 : difficulty === Difficulty.MEDIUM ? 20 : 30;
+      const timeBonus = timeLeft;
+      setTotalPoints(prev => prev + basePoints + timeBonus);
     }
 
     const updatedQuestion = { ...currentQuestion, userAnswer: answer };
@@ -52,11 +59,15 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
             setSelectedOption(undefined);
             setIsSubmitting(false);
         } else {
-            const finalScore = isCorrect ? currentScore + 1 : currentScore;
-            onQuizComplete(finalScore, newAnsweredQuestions);
+            // Recalculate final points to ensure state consistency on the last question
+            const finalPoints = isCorrect 
+                ? totalPoints + (difficulty === Difficulty.EASY ? 10 : difficulty === Difficulty.MEDIUM ? 20 : 30) + timeLeft 
+                : totalPoints;
+            playSound('complete', isSoundEnabled);
+            onQuizComplete(finalPoints, newAnsweredQuestions);
         }
-    }, 300); // Small delay for user feedback on the choice
-  }, [answeredQuestions, currentIndex, currentQuestion, currentScore, onQuizComplete, questions.length]);
+    }, 1200); // Increased delay to allow user to see feedback
+  }, [answeredQuestions, currentIndex, currentQuestion, totalPoints, onQuizComplete, questions.length, difficulty, timeLeft, isSoundEnabled]);
 
   // Effect to manage the timer lifecycle
   useEffect(() => {
@@ -73,6 +84,9 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
                 handleNextStep(undefined); // Time's up, answer is undefined
                 return 0;
             }
+            if (prevTime <= 6 && prevTime > 1) { // Tick for last 5 seconds
+              playSound('tick', isSoundEnabled);
+            }
             return prevTime - 1;
         });
     }, 1000);
@@ -80,15 +94,16 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
     return () => { // Cleanup
         if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [currentIndex, isSubmitting, handleNextStep]);
+  }, [currentIndex, isSubmitting, handleNextStep, isSoundEnabled]);
 
 
   const handleOptionSelect = (option: string) => {
+    if (isSubmitting) return;
     setSelectedOption(option);
   };
 
   const handleSubmitAnswer = () => {
-    if (!selectedOption) return;
+    if (!selectedOption || isSubmitting) return;
     handleNextStep(selectedOption);
   };
 
@@ -109,7 +124,7 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
         onOptionSelect={handleOptionSelect}
         questionNumber={currentIndex + 1}
         totalQuestions={questions.length}
-        isSubmitting={isSubmitting}
+        showAnswer={isSubmitting}
       />
       <button
         onClick={handleSubmitAnswer}

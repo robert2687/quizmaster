@@ -9,7 +9,7 @@ interface QuestionDisplayProps {
   onOptionSelect: (option: string) => void;
   questionNumber: number;
   totalQuestions: number;
-  isSubmitting: boolean;
+  showAnswer: boolean;
 }
 
 const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
@@ -18,9 +18,37 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   onOptionSelect,
   questionNumber,
   totalQuestions,
-  isSubmitting
+  showAnswer,
 }) => {
   const { t } = useTranslation();
+
+  const getButtonClass = (option: string) => {
+    const isSelected = selectedOption === option;
+    const isCorrect = question.correctAnswer === option;
+
+    // Base classes
+    let classes = 'w-full text-left p-3 md:p-4 border-2 rounded-lg transition-all duration-150 ease-in-out';
+
+    if (showAnswer) {
+      if (isCorrect) {
+        // Correct answer is always green and highlighted
+        return `${classes} bg-green-600 border-green-500 text-white scale-105 shadow-lg`;
+      }
+      if (isSelected && !isCorrect) {
+        // Incorrectly selected answer is red
+        return `${classes} bg-red-600 border-red-500 text-white`;
+      }
+      // Other non-selected, incorrect options are faded
+      return `${classes} bg-slate-700 border-slate-600 opacity-60 cursor-not-allowed`;
+    }
+
+    // Default state before answer is shown
+    if (isSelected) {
+      return `${classes} bg-purple-600 border-purple-500 text-white shadow-lg scale-105`;
+    }
+    return `${classes} bg-slate-700 border-slate-600 hover:bg-slate-600 hover:border-purple-500 text-slate-200`;
+  };
+
   return (
     <div className="w-full">
       <div className="mb-4 md:mb-6">
@@ -36,15 +64,8 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
           <button
             key={index}
             onClick={() => onOptionSelect(option)}
-            disabled={isSubmitting}
-            className={`w-full text-left p-3 md:p-4 border-2 rounded-lg transition-all duration-150 ease-in-out
-              ${selectedOption === option
-                ? 'bg-purple-600 border-purple-500 text-white shadow-lg scale-105'
-                : 'bg-slate-700 border-slate-600 hover:bg-slate-600 hover:border-purple-500 text-slate-200'
-              }
-              focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-800
-              disabled:opacity-70 disabled:cursor-wait
-            `}
+            disabled={showAnswer}
+            className={getButtonClass(option)}
             aria-pressed={selectedOption === option}
           >
             <span className="font-medium">{option}</span>

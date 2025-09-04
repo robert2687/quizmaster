@@ -19,10 +19,10 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack }) => {
     if (storedLeaderboard) {
       try {
         const parsedLeaderboard = JSON.parse(storedLeaderboard) as LeaderboardEntry[];
-        // Sort by percentage descending, then by timestamp descending for ties
+        // Sort by points descending, then by timestamp descending for ties
         parsedLeaderboard.sort((a, b) => {
-          if (b.percentage !== a.percentage) {
-            return b.percentage - a.percentage;
+          if (b.points !== a.points) {
+            return b.points - a.points;
           }
           return b.timestamp - a.timestamp;
         });
@@ -54,8 +54,9 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack }) => {
             <thead className="text-xs text-purple-300 uppercase bg-slate-700">
               <tr>
                 <th scope="col" className="px-4 py-3 w-16 text-center">{t('leaderboardRank')}</th>
+                <th scope="col" className="px-4 py-3">{t('leaderboardPlayer')}</th>
                 <th scope="col" className="px-4 py-3">{t('leaderboardTopic')}</th>
-                <th scope="col" className="px-4 py-3 text-center">{t('leaderboardScore')}</th>
+                <th scope="col" className="px-4 py-3 text-center">{t('leaderboardPoints')}</th>
                 <th scope="col" className="px-4 py-3 text-right">{t('leaderboardDate')}</th>
               </tr>
             </thead>
@@ -63,9 +64,10 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack }) => {
               {leaderboard.map((entry, index) => (
                 <tr key={entry.id} className="border-b border-slate-700 hover:bg-slate-700/50">
                   <td className="px-4 py-3 text-center font-medium text-slate-100">#{index + 1}</td>
-                  <td className="px-4 py-3 font-medium text-slate-100 break-all">{entry.topic}</td>
-                  <td className="px-4 py-3 text-center">
-                    {entry.score}/{entry.totalQuestions} ({entry.percentage}%)
+                  <td className="px-4 py-3 font-semibold text-slate-100">{entry.playerName}</td>
+                  <td className="px-4 py-3 font-medium text-slate-200 break-all">{entry.topic}</td>
+                  <td className="px-4 py-3 text-center font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">
+                    {entry.points}
                   </td>
                   <td className="px-4 py-3 text-right text-slate-400">{formatDate(entry.timestamp)}</td>
                 </tr>

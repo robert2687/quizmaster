@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuizQuestion } from '../types';
@@ -6,16 +7,17 @@ import CheckCircleIcon from './icons/CheckCircleIcon';
 import XCircleIcon from './icons/XCircleIcon';
 
 interface ResultsDisplayProps {
-  score: number;
+  points: number;
   questions: QuizQuestion[];
   onRestart: () => void;
   quizTopic: string;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ score, questions, onRestart, quizTopic }) => {
-  const { t, i18n } = useTranslation();
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRestart, quizTopic }) => {
+  const { t } = useTranslation();
   const totalQuestions = questions.length;
-  const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+  const correctAnswers = questions.filter(q => q.userAnswer === q.correctAnswer).length;
+  const percentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied'>('idle');
 
   let feedbackMessageKey = "";
@@ -37,9 +39,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ score, questions, onRes
 
   const handleShareResults = async () => {
     const shareText = t('shareResultsText', {
-      score,
-      totalQuestions,
-      percentage,
+      points,
       topic: quizTopic,
       interpolation: { escapeValue: false } // Allow for dynamic topic name
     });
@@ -62,9 +62,9 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ score, questions, onRes
       <p className="text-center text-slate-400 mb-6 text-lg">{t('resultsTopicLabel', { topic: quizTopic })}</p>
       
       <div className="text-center mb-8 p-6 bg-slate-700 rounded-lg">
-        <p className={`text-5xl font-bold ${feedbackColor}`}>{t('scorePercentage', {percentage})}</p>
+        <p className={`text-5xl font-bold ${feedbackColor}`}>{t('totalPoints', {points})}</p>
         <p className="text-2xl text-slate-200 mt-1">
-          {t('scoreOutOf', { score, totalQuestions })}
+          {t('scoreOutOf', { score: correctAnswers, totalQuestions })}
         </p>
         <p className={`mt-3 text-lg font-semibold ${feedbackColor}`}>{t(feedbackMessageKey)}</p>
       </div>

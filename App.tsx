@@ -10,19 +10,58 @@ import ErrorDisplay from './components/ErrorDisplay';
 import QuizFlow from './components/QuizFlow';
 import ResultsDisplay from './components/ResultsDisplay';
 import LanguageSwitcher from './components/LanguageSwitcher';
-import LeaderboardDisplay from './components/LeaderboardDisplay'; // Import LeaderboardDisplay
+import LeaderboardDisplay from './components/LeaderboardDisplay';
+import PlayerNameSetup from './components/PlayerNameSetup';
+import SoundToggle from './components/SoundToggle'; // Import the new component
 
 const LEADERBOARD_KEY = 'quizMasterLeaderboard';
+const PLAYER_NAME_KEY = 'quizMasterPlayerName';
+const SOUND_ENABLED_KEY = 'quizMasterSoundEnabled';
 const MAX_LEADERBOARD_ENTRIES = 10;
 
 const App: React.FC = () => {
-  const { t, i18n } = useTranslation(); // Destructure i18n here
+  const { t, i18n } = useTranslation();
+  const [playerName, setPlayerName] = useState<string | null>(null);
   const [topic, setTopic] = useState<string>('');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [score, setScore] = useState<number>(0);
-  const [quizState, setQuizState] = useState<QuizState>(QuizState.IDLE);
+  const [points, setPoints] = useState<number>(0);
+  const [quizState, setQuizState] = useState<QuizState>(QuizState.GENERATING); // Start in a loading-like state
   const [error, setError] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
+  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => {
+    const storedValue = localStorage.getItem(SOUND_ENABLED_KEY);
+    return storedValue !== 'false'; // Default to true if not set or is 'true'
+  });
+
+  useEffect(() => {
+    // On initial load, check for an existing player name
+    const storedPlayerName = localStorage.getItem(PLAYER_NAME_KEY);
+    if (storedPlayerName) {
+      setPlayerName(storedPlayerName);
+      setQuizState(QuizState.IDLE);
+    } else {
+      setQuizState(QuizState.PLAYER_SETUP);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(SOUND_ENABLED_KEY, String(isSoundEnabled));
+  }, [isSoundEnabled]);
+
+  const handleToggleSound = () => {
+    setIsSoundEnabled(prev => !prev);
+  };
+
+  const handleSetPlayerName = (name: string) => {
+    setPlayerName(name);
+    localStorage.setItem(PLAYER_NAME_KEY, name);
+    setQuizState(QuizState.IDLE);
+  };
+  
+  const handleChangePlayer = () => {
+      setQuizState(QuizState.PLAYER_SETUP);
+  };
+
 
   const handleGenerateQuiz = useCallback(async (currentTopic: string, currentDifficulty: Difficulty) => {
     setTopic(currentTopic);
@@ -33,28 +72,28 @@ const App: React.FC = () => {
       const generatedQuestions = await generateQuizFromTopic(currentTopic, currentDifficulty);
       if (generatedQuestions && generatedQuestions.length > 0) {
         setQuestions(generatedQuestions);
-        setScore(0); 
+        setPoints(0); 
         setQuizState(QuizState.IN_PROGRESS);
       } else {
-        setError(t('errorGeneratingNoQuestions')); // Use translation
+        setError(t('errorGeneratingNoQuestions'));
         setQuizState(QuizState.ERROR);
       }
     } catch (err) {
       console.error(err);
-      const errorMessage = err instanceof Error ? err.message : t('errorUnknownQuizGeneration'); // Use translation
+      const errorMessage = err instanceof Error ? err.message : t('errorUnknownQuizGeneration');
       setError(errorMessage); 
       setQuizState(QuizState.ERROR);
     }
-  }, [t]); // Add t to dependencies
+  }, [t]);
 
-  const saveScoreToLeaderboard = (currentTopic: string, currentScore: number, totalQuestions: number) => {
-    const percentage = totalQuestions > 0 ? Math.round((currentScore / totalQuestions) * 100) : 0;
+  const saveScoreToLeaderboard = useCallback((currentTopic: string, totalPoints: number) => {
+    if (!playerName) return;
+
     const newEntry: LeaderboardEntry = {
       id: crypto.randomUUID(),
+      playerName,
       topic: currentTopic,
-      score: currentScore,
-      totalQuestions,
-      percentage,
+      points: totalPoints,
       timestamp: Date.now(),
     };
 
@@ -63,35 +102,28 @@ const App: React.FC = () => {
       let leaderboard: LeaderboardEntry[] = storedLeaderboard ? JSON.parse(storedLeaderboard) : [];
       
       leaderboard.push(newEntry);
-      // Sort by percentage descending, then by timestamp descending
-      leaderboard.sort((a, b) => {
-        if (b.percentage !== a.percentage) {
-          return b.percentage - a.percentage;
-        }
-        return b.timestamp - a.timestamp;
-      });
+      leaderboard.sort((a, b) => b.points - a.points || b.timestamp - a.timestamp);
 
-      // Keep only top N entries
       leaderboard = leaderboard.slice(0, MAX_LEADERBOARD_ENTRIES);
       localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
     } catch (e) {
       console.error("Failed to save score to leaderboard:", e);
     }
-  };
+  }, [playerName]);
 
-  const handleQuizComplete = useCallback((finalScore: number, answeredQuestions: QuizQuestion[]) => {
-    setScore(finalScore);
+  const handleQuizComplete = useCallback((totalPoints: number, answeredQuestions: QuizQuestion[]) => {
+    setPoints(totalPoints);
     setQuestions(answeredQuestions); 
     setQuizState(QuizState.COMPLETED);
     if (topic && answeredQuestions.length > 0) {
-      saveScoreToLeaderboard(topic, finalScore, answeredQuestions.length);
+      saveScoreToLeaderboard(topic, totalPoints);
     }
-  }, [topic]); // topic is a dependency
+  }, [topic, saveScoreToLeaderboard]);
 
   const handleRestart = useCallback(() => {
     setTopic('');
     setQuestions([]);
-    setScore(0);
+    setPoints(0);
     setError(null);
     setQuizState(QuizState.IDLE);
   }, []);
@@ -104,50 +136,30 @@ const App: React.FC = () => {
     setQuizState(QuizState.IDLE);
   };
 
-
-  useEffect(() => {
-    // Add i18n keys for new error messages if not already present
-    // This is a conceptual placeholder, actual error messages should be added to i18n.ts
-    if (!i18n.exists('errorGeneratingNoQuestions')) {
-      i18n.addResources('en', 'translation', { 
-        errorGeneratingNoQuestions: "The AI couldn't generate a quiz for this topic. Please try a different one." 
-      });
-      i18n.addResources('sk', 'translation', { 
-        errorGeneratingNoQuestions: "Umela inteligencia nedokázala pre túto tému vygenerovať kvíz. Skúste inú." 
-      });
-    }
-    if (!i18n.exists('errorUnknownQuizGeneration')) {
-       i18n.addResources('en', 'translation', { 
-        errorUnknownQuizGeneration: "An unknown error occurred while generating the quiz."
-      });
-       i18n.addResources('sk', 'translation', { 
-        errorUnknownQuizGeneration: "Pri generovaní kvízu sa vyskytla neznáma chyba."
-      });
-    }
-  }, [t, i18n]); // Add i18n to dependency array
-
-
   const renderContent = () => {
     switch (quizState) {
+      case QuizState.PLAYER_SETUP:
+        return <PlayerNameSetup onNameSubmit={handleSetPlayerName} />;
       case QuizState.IDLE:
         return (
           <div className="w-full flex flex-col items-center">
-            {/* FIX: The comparison 'quizState === QuizState.GENERATING' is always false inside this case block due to type narrowing. Pass 'false' directly. */}
             <TopicForm onGenerateQuiz={handleGenerateQuiz} isGenerating={false} />
           </div>
         );
       case QuizState.GENERATING:
-        return <LoadingSpinner message={t('loadingMessageTopic', { topic })} />;
+         // Only show topic if it's set, otherwise show default
+        const message = topic ? t('loadingMessageTopic', { topic }) : t('loadingMessageDefault');
+        return <LoadingSpinner message={message} />;
       case QuizState.IN_PROGRESS:
-        return <QuizFlow questions={questions} onQuizComplete={handleQuizComplete} quizTopic={topic} />;
+        return <QuizFlow questions={questions} onQuizComplete={handleQuizComplete} quizTopic={topic} difficulty={difficulty} isSoundEnabled={isSoundEnabled} />;
       case QuizState.COMPLETED:
-        return <ResultsDisplay score={score} questions={questions} onRestart={handleRestart} quizTopic={topic} />;
+        return <ResultsDisplay points={points} questions={questions} onRestart={handleRestart} quizTopic={topic} />;
       case QuizState.ERROR:
         return <ErrorDisplay message={error || "An unknown error occurred."} onRetry={handleRestart} />;
       case QuizState.SHOW_LEADERBOARD:
         return <LeaderboardDisplay onBack={handleBackFromLeaderboard} />;
       default:
-        return null;
+        return <LoadingSpinner />; // Default loading state
     }
   };
 
@@ -159,18 +171,30 @@ const App: React.FC = () => {
       </main>
       <footer className="text-center py-4 mt-auto w-full max-w-3xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-          <p className="text-sm text-slate-500">
-            {t('poweredBy')} &copy; {new Date().getFullYear()} {t('footerRights')}.
-          </p>
-          <div className="flex items-center space-x-4">
-            {quizState !== QuizState.SHOW_LEADERBOARD && quizState !== QuizState.GENERATING && quizState !== QuizState.IN_PROGRESS && (
+          <div className="text-sm text-slate-500">
+             {playerName && quizState !== QuizState.PLAYER_SETUP && (
+              <div className="mb-2 sm:mb-0">
+                <span>{t('playingAs')} <strong>{playerName}</strong></span>
+                <button onClick={handleChangePlayer} className="ml-2 text-purple-400 hover:text-purple-300 text-xs">
+                  {t('changePlayer')}
+                </button>
+              </div>
+            )}
+            <p>
+              {t('poweredBy')} &copy; {new Date().getFullYear()} {t('footerRights')}.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {quizState === QuizState.IDLE && (
               <button
                 onClick={handleViewLeaderboard}
-                className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                className="text-sm text-purple-400 hover:text-purple-300 transition-colors px-2"
               >
                 {t('viewLeaderboardButton')}
               </button>
             )}
+            <SoundToggle isSoundEnabled={isSoundEnabled} onToggle={handleToggleSound} />
             <LanguageSwitcher />
           </div>
         </div>

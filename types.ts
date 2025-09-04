@@ -8,12 +8,13 @@ export interface QuizQuestion {
 }
 
 export enum QuizState {
+  PLAYER_SETUP = 'player_setup', // New state for initial player name entry
   IDLE = 'idle',
   GENERATING = 'generating',
   IN_PROGRESS = 'inProgress',
   COMPLETED = 'completed',
   ERROR = 'error',
-  SHOW_LEADERBOARD = 'show_leaderboard', // New state for showing leaderboard
+  SHOW_LEADERBOARD = 'show_leaderboard',
 }
 
 export enum Difficulty {
@@ -33,9 +34,8 @@ export interface GroundingChunk {
 
 export interface LeaderboardEntry {
   id: string;
+  playerName: string;
   topic: string;
-  score: number;
-  totalQuestions: number;
-  percentage: number;
+  points: number;
   timestamp: number; // Unix timestamp
 }
