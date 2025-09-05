@@ -3,15 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { LeaderboardEntry, LeaderboardFilters } from '../types';
 import { getLeaderboard } from '../services/leaderboardService';
 import LoadingSpinner from './LoadingSpinner';
-import ErrorDisplay from './ErrorDisplay'; // Re-use the ErrorDisplay component
+import ErrorDisplay from './ErrorDisplay';
 import Button from './Button';
+import Avatar from './Avatar';
+import MedalIcon from './icons/MedalIcon';
 
 interface LeaderboardDisplayProps {
   onBack: () => void;
-  playerName: string | null; // Add playerName to identify the user's score
+  userEmail: string | null;
 }
 
-const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, playerName }) => {
+const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEmail }) => {
   const { t, i18n } = useTranslation();
   const [fullLeaderboard, setFullLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -49,20 +51,29 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, playerN
   const renderLeaderboardRows = (entries: LeaderboardEntry[], rankOffset: number = 0) => {
     return entries.map((entry, index) => {
         const rank = rankOffset + index + 1;
-        const isCurrentUser = playerName && entry.playerName === playerName;
+        const isCurrentUser = userEmail && entry.userEmail === userEmail;
         return (
             <tr 
                 key={entry.id} 
-                className={`border-b border-slate-700 transition-colors duration-200 ${
-                isCurrentUser 
-                    ? 'bg-purple-900/60 border-l-4 border-purple-500' 
+                className={`border-b border-slate-700 transition-all duration-200 animate-fade-in ${
+                  isCurrentUser 
+                    ? 'bg-purple-900/60 border-l-4 border-purple-500 scale-[1.01] shadow-lg' 
                     : 'hover:bg-slate-700/50'
                 }`}
+                style={{ animationDelay: `${index * 50}ms` }}
             >
-                <td className={`px-4 py-3 text-center font-bold ${isCurrentUser ? 'text-purple-300' : 'text-slate-100'}`}>
-                    #{rank}
+                <td className="px-4 py-3 text-center font-bold text-slate-100">
+                    <div className="flex items-center justify-center space-x-2">
+                        {rank <= 3 && filters.topic === '' ? <MedalIcon rank={rank} className="w-6 h-6" /> : <span>#{rank}</span>}
+                    </div>
                 </td>
-                <td className="px-4 py-3 font-semibold text-white">{entry.playerName}</td>
+                <td className="px-4 py-3 font-semibold text-white">
+                  <div className="flex items-center gap-3">
+                    <Avatar avatarId={entry.avatarId} className="w-8 h-8 rounded-full flex-shrink-0" />
+                    <span className="truncate">{entry.playerName}</span>
+                    {isCurrentUser && <span className="text-xs bg-purple-500 text-white font-bold px-2 py-0.5 rounded-full">You</span>}
+                  </div>
+                </td>
                 <td className="px-4 py-3 font-medium text-slate-200 break-words max-w-xs">{entry.topic}</td>
                 <td className="px-4 py-3 text-center font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">
                 {entry.points}
@@ -95,7 +106,7 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, playerN
     }
 
     const top10 = fullLeaderboard.slice(0, 10);
-    const playerIndex = playerName ? fullLeaderboard.findIndex(e => e.playerName === playerName && e.id === fullLeaderboard.find(p => p.playerName === playerName)?.id) : -1;
+    const playerIndex = userEmail ? fullLeaderboard.findIndex(e => e.userEmail === userEmail) : -1;
     const isPlayerInTop10 = playerIndex !== -1 && playerIndex < 10;
     const shouldShowPlayerRank = playerIndex !== -1 && !isPlayerInTop10;
 

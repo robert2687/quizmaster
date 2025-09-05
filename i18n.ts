@@ -1,3 +1,4 @@
+
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
@@ -28,6 +29,11 @@ const resources = {
       switchToLogin: "Already have an account? Login",
       authError: "Authentication failed. Please check your credentials.",
       signupError: "Could not create account. The email may already be in use.",
+      // Occupation Selector
+      occupationSelectorTitle: "What is your occupation?",
+      occupationSelectorSubtitle: "Select one to help us personalize your quiz experience (optional).",
+      occupationLabel: "Occupation",
+      skipButton: "Skip for Now",
       // Profile Editor
       profileEditorTitle: "Edit Your Profile",
       editProfileButton: "Edit Profile",
@@ -153,6 +159,11 @@ const resources = {
       switchToLogin: "Už máte účet? Prihláste sa",
       authError: "Prihlásenie zlyhalo. Skontrolujte svoje údaje.",
       signupError: "Nepodarilo sa vytvoriť účet. Email už môže byť použitý.",
+      // Occupation Selector
+      occupationSelectorTitle: "Aké je vaše povolanie?",
+      occupationSelectorSubtitle: "Vyberte jedno, aby sme vám mohli prispôsobiť kvíz (voliteľné).",
+      occupationLabel: "Povolanie",
+      skipButton: "Preskočiť",
       // Profile Editor
       profileEditorTitle: "Upraviť Váš Profil",
       editProfileButton: "Upraviť Profil",

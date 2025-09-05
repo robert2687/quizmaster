@@ -8,7 +8,8 @@ const MODEL_NAME = "gemini-2.5-flash";
 export const generateQuizFromTopic = async (
   topic: string, 
   difficulty: string, 
-  useGrounding: boolean
+  useGrounding: boolean,
+  occupation?: string,
 ): Promise<{ questions: QuizQuestion[]; sources: GroundingChunk[] | null }> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -18,16 +19,20 @@ export const generateQuizFromTopic = async (
 
   const ai = new GoogleGenAI({ apiKey });
 
+  const personalizationInstruction = occupation && occupation !== 'None'
+    ? ` The user's occupation is ${occupation}, so tailor the questions to be relevant to someone with that background.`
+    : '';
+
   // Prompt for standard, non-grounded generation
   const standardPrompt = `You are an expert quiz generator.
-Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.
+Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.${personalizationInstruction}
 The quiz should consist of 5 multiple-choice questions.
 Each question must have exactly 4 unique answer options.
 For each question, clearly identify the correct answer by its text.`;
 
   // Prompt for generation with Google Search grounding, explicitly asking for JSON
   const groundedPrompt = `You are an expert quiz generator.
-Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.
+Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.${personalizationInstruction}
 The quiz should consist of 5 multiple-choice questions.
 Each question must have exactly 4 unique answer options.
 For each question, clearly identify the correct answer by its text.

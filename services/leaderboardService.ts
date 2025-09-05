@@ -38,11 +38,52 @@ const getSeasonStartDate = (): number => {
 }
 
 /**
+ * Populates the leaderboard with fake data if it doesn't exist,
+ * simulating an active online community for new users.
+ */
+const seedLeaderboardIfNeeded = () => {
+  const storedLeaderboard = localStorage.getItem(LEADERBOARD_KEY);
+  if (storedLeaderboard === null) { // Seed only if it's completely empty
+    const fakePlayers = [
+      { name: 'CosmicExplorer', avatar: 'avatar1' },
+      { name: 'QuizNinja', avatar: 'avatar2' },
+      { name: 'HistoryBuff_99', avatar: 'avatar3' },
+      { name: 'SciFi_Fanatic', avatar: 'avatar4' },
+      { name: 'ArtLover22', avatar: 'avatar5' },
+      { name: 'CodeWizard', avatar: 'avatar6' },
+    ];
+    const fakeTopics = ["The Solar System", "World War II History", "Famous Artists", "Roman Mythology", "Programming Languages", "Famous Movie Quotes"];
+
+    const now = Date.now();
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+    const fakeEntries: LeaderboardEntry[] = [];
+
+    for (let i = 0; i < 20; i++) {
+      const player = fakePlayers[Math.floor(Math.random() * fakePlayers.length)];
+      const topic = fakeTopics[Math.floor(Math.random() * fakeTopics.length)];
+      fakeEntries.push({
+        id: crypto.randomUUID(),
+        playerName: player.name,
+        userEmail: `${player.name.toLowerCase()}@example.com`,
+        avatarId: player.avatar,
+        topic: topic,
+        points: Math.floor(Math.random() * 450) + 50, // Score between 50 and 500
+        timestamp: now - Math.floor(Math.random() * oneWeek * 2) // Within the last two weeks
+      });
+    }
+    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(fakeEntries));
+  }
+};
+
+
+/**
  * Fetches the leaderboard data, with optional filtering.
  * @returns A promise that resolves with an array of leaderboard entries.
  */
 export const getLeaderboard = async (filters: LeaderboardFilters): Promise<LeaderboardEntry[]> => {
   try {
+    seedLeaderboardIfNeeded(); // Ensure we have some data to show
     const storedLeaderboard = localStorage.getItem(LEADERBOARD_KEY);
     const leaderboard: LeaderboardEntry[] = storedLeaderboard ? JSON.parse(storedLeaderboard) : [];
     
@@ -84,6 +125,7 @@ export const postScore = async (newEntry: Omit<LeaderboardEntry, 'id' | 'timesta
   };
 
   try {
+    seedLeaderboardIfNeeded(); // Ensure leaderboard exists before adding to it
     const storedLeaderboard = localStorage.getItem(LEADERBOARD_KEY);
     let leaderboard: LeaderboardEntry[] = storedLeaderboard ? JSON.parse(storedLeaderboard) : [];
     

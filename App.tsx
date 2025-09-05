@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, User, GroundingChunk } from './types';
@@ -25,6 +26,7 @@ import LinkButton from './components/LinkButton';
 import AchievementsDisplay from './components/AchievementsDisplay';
 import ProfileEditor from './components/ProfileEditor';
 import Avatar from './components/Avatar';
+import OccupationSelector from './components/OccupationSelector';
 
 const SOUND_ENABLED_KEY = 'quizMasterSoundEnabled';
 const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
@@ -79,10 +81,14 @@ const App: React.FC = () => {
     setIsSoundEnabled(prev => !prev);
   };
 
-  const handleAuthSuccess = (user: User) => {
+  const handleAuthSuccess = (user: User, isNewUser: boolean) => {
     setCurrentUser(user);
     setPlayerStats(getPlayerStats(user.email));
-    setQuizState(QuizState.IDLE);
+    if (isNewUser) {
+        setQuizState(QuizState.PROFILE_SETUP);
+    } else {
+        setQuizState(QuizState.IDLE);
+    }
   };
   
   const handleLogout = () => {
@@ -100,7 +106,7 @@ const App: React.FC = () => {
     setError(null);
     setSources(null);
     try {
-      const { questions: generatedQuestions, sources: generatedSources } = await generateQuizFromTopic(currentTopic, currentDifficulty, useGrounding);
+      const { questions: generatedQuestions, sources: generatedSources } = await generateQuizFromTopic(currentTopic, currentDifficulty, useGrounding, currentUser.occupation);
       if (generatedQuestions && generatedQuestions.length > 0) {
         const xpForStarting = 10;
         const { newStats } = addXp(currentUser.email, xpForStarting);
@@ -129,6 +135,8 @@ const App: React.FC = () => {
     try {
       await postScore({
         playerName: currentUser.playerName,
+        userEmail: currentUser.email,
+        avatarId: currentUser.avatar,
         topic: currentTopic,
         points: totalPoints,
       });
@@ -220,6 +228,24 @@ const App: React.FC = () => {
     setLastXpGained(0);
   }, []);
 
+  const handleOccupationSelected = async (occupation: string) => {
+    if (!currentUser) return;
+    try {
+      const updatedUser = await authService.updateUserProfile(currentUser.email, { occupation });
+      setCurrentUser(updatedUser);
+      addToast(t('profileUpdatedSuccess'), 'success');
+      setQuizState(QuizState.IDLE);
+    } catch (error) {
+      console.error('Failed to update occupation', error);
+      // Even if it fails, let's proceed to the app
+      setQuizState(QuizState.IDLE);
+    }
+  };
+
+  const handleSkipOccupation = () => {
+    setQuizState(QuizState.IDLE);
+  };
+
   const handleProfileUpdate = (updatedUser: User) => {
     setCurrentUser(updatedUser);
     setQuizState(QuizState.IDLE);
@@ -238,6 +264,8 @@ const App: React.FC = () => {
     switch (quizState) {
       case QuizState.AUTH:
         return <AuthFlow onAuthSuccess={handleAuthSuccess} />;
+      case QuizState.PROFILE_SETUP:
+        return <OccupationSelector onSelect={handleOccupationSelected} onSkip={handleSkipOccupation} />;
       case QuizState.IDLE:
         return <TopicForm onGenerateQuiz={handleGenerateQuiz} isGenerating={false} />;
       case QuizState.GENERATING:
@@ -250,7 +278,7 @@ const App: React.FC = () => {
       case QuizState.ERROR:
         return <ErrorDisplay message={error || "An unknown error occurred."} onRetry={handleRestart} />;
       case QuizState.SHOW_LEADERBOARD:
-        return <LeaderboardDisplay onBack={handleBackToIdle} playerName={currentUser?.playerName ?? null} />;
+        return <LeaderboardDisplay onBack={handleBackToIdle} userEmail={currentUser?.email ?? null} />;
       case QuizState.SHOW_HISTORY:
         return <QuizHistoryDisplay onBack={handleBackToIdle} playerIdentifier={currentUser?.email ?? null} />;
       case QuizState.SHOW_ACHIEVEMENTS:

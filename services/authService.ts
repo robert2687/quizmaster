@@ -1,3 +1,4 @@
+
 import { User } from '../types';
 
 // In a real application, this would be a secure backend database.
@@ -11,6 +12,7 @@ interface StoredUser {
   passwordHash: string;
   avatar: string;
   bio: string;
+  occupation?: string;
 }
 
 /**
@@ -49,6 +51,7 @@ export const signUp = (playerName: string, email: string, password: string): Pro
         passwordHash: hashPassword(password),
         avatar: 'avatar1', // Default avatar
         bio: '',           // Default empty bio
+        occupation: undefined, // Set after this step
       };
 
       users.push(newUser);
@@ -57,7 +60,7 @@ export const signUp = (playerName: string, email: string, password: string): Pro
       // Automatically log the user in after successful registration
       sessionStorage.setItem(SESSION_KEY, newUser.email);
 
-      resolve({ email: newUser.email, playerName: newUser.playerName, avatar: newUser.avatar, bio: newUser.bio });
+      resolve({ email: newUser.email, playerName: newUser.playerName, avatar: newUser.avatar, bio: newUser.bio, occupation: newUser.occupation });
     }, 500);
   });
 };
@@ -76,6 +79,7 @@ export const login = (email: string, password: string): Promise<User> => {
           playerName: user.playerName,
           avatar: user.avatar || 'avatar1',
           bio: user.bio || '',
+          occupation: user.occupation,
         });
       } else {
         reject(new Error("Invalid email or password."));
@@ -102,7 +106,8 @@ export const getCurrentUser = (): User | null => {
         email: user.email, 
         playerName: user.playerName,
         avatar: user.avatar || 'avatar1',
-        bio: user.bio || '' 
+        bio: user.bio || '',
+        occupation: user.occupation,
     };
   }
   
@@ -111,7 +116,7 @@ export const getCurrentUser = (): User | null => {
   return null;
 };
 
-export const updateUserProfile = (email: string, updates: Partial<Pick<User, 'playerName' | 'avatar' | 'bio'>>): Promise<User> => {
+export const updateUserProfile = (email: string, updates: Partial<Pick<User, 'playerName' | 'avatar' | 'bio' | 'occupation'>>): Promise<User> => {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             const users = getUsers();
@@ -130,7 +135,8 @@ export const updateUserProfile = (email: string, updates: Partial<Pick<User, 'pl
                 email: updatedUser.email,
                 playerName: updatedUser.playerName,
                 avatar: updatedUser.avatar,
-                bio: updatedUser.bio
+                bio: updatedUser.bio,
+                occupation: updatedUser.occupation,
             });
         }, 300);
     });

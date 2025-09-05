@@ -9,6 +9,7 @@ export interface QuizQuestion {
 
 export enum QuizState {
   AUTH = 'auth', // New state for login/signup
+  PROFILE_SETUP = 'profile_setup', // New state for post-signup setup
   IDLE = 'idle',
   GENERATING = 'generating',
   IN_PROGRESS = 'inProgress',
@@ -40,6 +41,8 @@ export interface GroundingChunk {
 export interface LeaderboardEntry {
   id: string;
   playerName: string;
+  userEmail: string; // To uniquely identify the user
+  avatarId: string; // To display the user's avatar
   topic: string;
   points: number;
   timestamp: number; // Unix timestamp
@@ -84,4 +87,5 @@ export interface User {
   playerName: string;
   avatar: string;
   bio: string;
+  occupation?: string;
 }

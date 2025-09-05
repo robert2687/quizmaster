@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User } from '../types';
 import * as authService from '../services/authService';
 import Button from './Button';
 import Avatar, { AVATAR_OPTIONS } from './Avatar';
+import { OCCUPATIONS } from '../services/occupations';
 
 interface ProfileEditorProps {
   currentUser: User;
@@ -18,6 +20,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUser, onProfileUpd
   const [playerName, setPlayerName] = useState(currentUser.playerName);
   const [bio, setBio] = useState(currentUser.bio);
   const [selectedAvatar, setSelectedAvatar] = useState(currentUser.avatar);
+  const [occupation, setOccupation] = useState(currentUser.occupation || 'None');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +33,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUser, onProfileUpd
         playerName: playerName.trim(),
         avatar: selectedAvatar,
         bio: bio.trim(),
+        occupation: occupation,
       });
       onProfileUpdate(updatedUser);
     } catch (err) {
@@ -77,6 +81,22 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUser, onProfileUpd
             required
             maxLength={20}
           />
+        </div>
+
+        <div>
+           <label htmlFor="occupation" className="block text-sm font-medium text-slate-300 mb-1">
+            {t('occupationLabel')}
+          </label>
+          <select
+            id="occupation"
+            value={occupation}
+            onChange={(e) => setOccupation(e.target.value)}
+            className={commonInputClasses}
+          >
+            {OCCUPATIONS.map(occ => (
+              <option key={occ} value={occ}>{occ}</option>
+            ))}
+          </select>
         </div>
 
         <div>
