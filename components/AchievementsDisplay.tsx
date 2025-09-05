@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ALL_ACHIEVEMENTS, getUnlockedAchievementIds } from '../services/achievementsService';
 import Button from './Button';
@@ -6,12 +6,22 @@ import TrophyIcon from './icons/TrophyIcon';
 
 interface AchievementsDisplayProps {
   onBack: () => void;
-  playerIdentifier: string | null; // Use a stable identifier like email
+  playerIdentifier: string | null; // Use a stable identifier like user ID
 }
 
 const AchievementsDisplay: React.FC<AchievementsDisplayProps> = ({ onBack, playerIdentifier }) => {
   const { t } = useTranslation();
-  const unlockedIds = playerIdentifier ? getUnlockedAchievementIds(playerIdentifier) : new Set<string>();
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      if (playerIdentifier) {
+        const ids = await getUnlockedAchievementIds(playerIdentifier);
+        setUnlockedIds(ids);
+      }
+    };
+    fetchAchievements();
+  }, [playerIdentifier]);
 
   return (
     <div className="w-full max-w-2xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">

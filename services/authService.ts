@@ -1,143 +1,131 @@
 
+
 import { User } from '../types';
+import { supabase } from './supabaseClient';
 
-// In a real application, this would be a secure backend database.
-const USERS_KEY = 'quizMasterUsers';
-// sessionStorage is used to keep the user logged in for the duration of the browser tab.
-const SESSION_KEY = 'quizMasterCurrentUserEmail';
-
-interface StoredUser {
-  email: string;
-  playerName: string;
-  passwordHash: string;
-  avatar: string;
-  bio: string;
-  occupation?: string;
-}
-
-/**
- * A simple, non-secure hashing function for demonstration purposes.
- * In a real app, use a strong, salted hashing algorithm like Argon2 or bcrypt on the server.
- * @param password The password to hash.
- * @returns A pseudo-hashed string.
- */
-const hashPassword = (password: string): string => {
-  // This is not secure, but illustrates the concept of not storing plain text passwords.
-  return btoa(password.split('').reverse().join('') + '_salty');
-};
-
-const getUsers = (): StoredUser[] => {
-  const usersJson = localStorage.getItem(USERS_KEY);
-  return usersJson ? JSON.parse(usersJson) : [];
-};
-
-const saveUsers = (users: StoredUser[]) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-};
-
-export const signUp = (playerName: string, email: string, password: string): Promise<User> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const users = getUsers();
-      const normalizedEmail = email.toLowerCase();
-      
-      if (users.some(user => user.email === normalizedEmail)) {
-        return reject(new Error("User with this email already exists."));
-      }
-
-      const newUser: StoredUser = {
-        playerName,
-        email: normalizedEmail,
-        passwordHash: hashPassword(password),
-        avatar: 'avatar1', // Default avatar
-        bio: '',           // Default empty bio
-        occupation: undefined, // Set after this step
-      };
-
-      users.push(newUser);
-      saveUsers(users);
-
-      // Automatically log the user in after successful registration
-      sessionStorage.setItem(SESSION_KEY, newUser.email);
-
-      resolve({ email: newUser.email, playerName: newUser.playerName, avatar: newUser.avatar, bio: newUser.bio, occupation: newUser.occupation });
-    }, 500);
+export const signUp = async (playerName: string, email: string, password: string): Promise<User> => {
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        player_name: playerName,
+      },
+    },
   });
-};
 
-export const login = (email: string, password: string): Promise<User> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const users = getUsers();
-      const normalizedEmail = email.toLowerCase();
-      const user = users.find(u => u.email === normalizedEmail);
-
-      if (user && user.passwordHash === hashPassword(password)) {
-        sessionStorage.setItem(SESSION_KEY, user.email);
-        resolve({ 
-          email: user.email, 
-          playerName: user.playerName,
-          avatar: user.avatar || 'avatar1',
-          bio: user.bio || '',
-          occupation: user.occupation,
-        });
-      } else {
-        reject(new Error("Invalid email or password."));
-      }
-    }, 500);
-  });
-};
-
-export const logout = () => {
-  sessionStorage.removeItem(SESSION_KEY);
-};
-
-export const getCurrentUser = (): User | null => {
-  const email = sessionStorage.getItem(SESSION_KEY);
-  if (!email) {
-    return null;
-  }
-
-  const users = getUsers();
-  const user = users.find(u => u.email === email);
-  
-  if (user) {
-    return { 
-        email: user.email, 
-        playerName: user.playerName,
-        avatar: user.avatar || 'avatar1',
-        bio: user.bio || '',
-        occupation: user.occupation,
-    };
+  if (authError || !authData.user) {
+    throw new Error(authError?.message || "Could not sign up user.");
   }
   
-  // Clean up session if user is not found in storage (e.g., storage was cleared)
-  logout();
-  return null;
-};
-
-export const updateUserProfile = (email: string, updates: Partial<Pick<User, 'playerName' | 'avatar' | 'bio' | 'occupation'>>): Promise<User> => {
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            const users = getUsers();
-            const userIndex = users.findIndex(u => u.email === email);
-
-            if (userIndex === -1) {
-                return reject(new Error("User not found."));
-            }
-
-            // Update user data
-            const updatedUser = { ...users[userIndex], ...updates };
-            users[userIndex] = updatedUser;
-            saveUsers(users);
-
-            resolve({
-                email: updatedUser.email,
-                playerName: updatedUser.playerName,
-                avatar: updatedUser.avatar,
-                bio: updatedUser.bio,
-                occupation: updatedUser.occupation,
-            });
-        }, 300);
+  // After successful sign-up in Auth, create a corresponding profile in the database.
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .insert({
+      id: authData.user.id,
+      email: email.toLowerCase(),
+      player_name: playerName,
+      avatar: 'avatar1', // Default avatar
+      bio: '',
+      unlocked_achievements: [],
     });
+
+  if (profileError) {
+    // If profile creation fails, it's best to delete the auth user to avoid orphaned accounts.
+    // This requires admin privileges and is complex to do from the client.
+    // For now, we'll log the error. In a real app, this would be a server-side transaction or cleanup job.
+    console.error("Failed to create user profile:", profileError);
+    throw new Error(profileError.message);
+  }
+
+  const user = await getUserProfile(authData.user.id);
+  if (!user) {
+     throw new Error("Could not retrieve user profile after creation.");
+  }
+  return user;
+};
+
+export const login = async (email: string, password: string): Promise<User> => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
+
+    if (error || !data.user) {
+        throw new Error(error?.message || "Invalid email or password.");
+    }
+    
+    const user = await getUserProfile(data.user.id);
+    if (!user) {
+        // This case might happen if a user exists in auth but not in profiles table.
+        // A robust app might try to re-create the profile here.
+        throw new Error("User profile not found.");
+    }
+
+    return user;
+};
+
+export const logout = async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.error("Error logging out:", error);
+  }
+};
+
+export const getUserProfile = async (userId: string): Promise<User | null> => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    if (error || !data) {
+        console.error("Error fetching profile:", error?.message);
+        return null;
+    }
+    
+    // Map database snake_case to application camelCase
+    return {
+        id: data.id,
+        email: data.email,
+        playerName: data.player_name,
+        avatar: data.avatar,
+        bio: data.bio,
+        occupation: data.occupation,
+    };
+};
+
+
+export const updateUserProfile = async (userId: string, updates: Partial<Pick<User, 'playerName' | 'avatar' | 'bio' | 'occupation'>>): Promise<User> => {
+    // Map application camelCase to database snake_case
+    const dbUpdates = {
+        player_name: updates.playerName,
+        avatar: updates.avatar,
+        bio: updates.bio,
+        occupation: updates.occupation,
+    };
+    
+    // Remove undefined fields so they don't overwrite existing data in the DB
+    Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .update(dbUpdates)
+        .eq('id', userId)
+        .select()
+        .single();
+    
+    if (error || !data) {
+        throw new Error(error?.message || "Failed to update profile.");
+    }
+
+    // Map the returned data back to the User type
+    return {
+        id: data.id,
+        email: data.email,
+        playerName: data.player_name,
+        avatar: data.avatar,
+        bio: data.bio,
+        occupation: data.occupation,
+    };
 };

@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse, Type, GroundingChunk } from "@google/genai";
-import { QuizQuestion } from '../types';
+import { QuizQuestion, ImagePayload } from '../types';
 
 // FIX: Updated model name to a stable, recommended version.
 const MODEL_NAME = "gemini-2.5-flash";
@@ -9,6 +9,7 @@ export const generateQuizFromTopic = async (
   difficulty: string, 
   useGrounding: boolean,
   occupation?: string,
+  imagePayload?: ImagePayload | null,
 ): Promise<{ questions: QuizQuestion[]; sources: GroundingChunk[] | null }> => {
   // FIX: Removed manual API key check. Assuming key is provided by the environment as per guidelines.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -17,31 +18,57 @@ export const generateQuizFromTopic = async (
     ? ` The user's occupation is ${occupation}, so tailor the questions to be relevant to someone with that background.`
     : '';
 
-  // Prompt for standard, non-grounded generation
-  const standardPrompt = `You are an expert quiz generator.
-Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.${personalizationInstruction}
-The quiz should consist of 5 multiple-choice questions.
+  // --- Prompts ---
+  const basePrompt = `You are an expert quiz generator.
+Create a quiz consisting of 5 multiple-choice questions.
 Each question must have exactly 4 unique answer options.
 For each question, clearly identify the correct answer by its text.`;
+  
+  // Prompt for text-based generation
+  const standardPrompt = `${basePrompt}
+The quiz should be about the topic: "${topic}" at a ${difficulty} difficulty level.${personalizationInstruction}`;
 
-  // Prompt for generation with Google Search grounding, explicitly asking for JSON
-  const groundedPrompt = `You are an expert quiz generator.
-Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.${personalizationInstruction}
-The quiz should consist of 5 multiple-choice questions.
-Each question must have exactly 4 unique answer options.
-For each question, clearly identify the correct answer by its text.
+  // Prompt for text-based generation with Google Search grounding
+  const groundedPrompt = `${standardPrompt}
 Respond ONLY with a valid JSON array of question objects and nothing else. Do not include markdown fences like \`\`\`json.`;
 
-  // Base configuration
+  // Prompt for image-based generation
+  const imagePrompt = `${basePrompt}
+Analyze the provided image and generate the quiz based on its content, context, or subject matter. The difficulty should be ${difficulty}.${personalizationInstruction}
+${topic ? ` Use the following instruction as a hint: "${topic}".` : ''}
+`;
+
+  // --- Configuration ---
   const config: any = {
     temperature: 0.3,
   };
 
-  // Conditionally add grounding or response schema
-  if (useGrounding) {
-    config.tools = [{googleSearch: {}}];
-  } else {
+  let contents: any;
+
+  // If an image is provided, set up for a multimodal request.
+  if (imagePayload) {
+    const imagePart = {
+      inlineData: {
+        mimeType: imagePayload.mimeType,
+        data: imagePayload.data,
+      },
+    };
+    const textPart = { text: imagePrompt };
+    contents = { parts: [imagePart, textPart] };
+    // Grounding is not used with image prompts, so ensure the response schema is set.
     config.responseMimeType = "application/json";
+  } else {
+    // Otherwise, use the standard text-based prompts.
+    contents = useGrounding ? groundedPrompt : standardPrompt;
+    if (useGrounding) {
+      config.tools = [{googleSearch: {}}];
+    } else {
+      config.responseMimeType = "application/json";
+    }
+  }
+
+  // Define the JSON schema unless grounding is used.
+  if (config.responseMimeType === "application/json") {
     config.responseSchema = {
       type: Type.ARRAY,
       items: {
@@ -67,13 +94,12 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
     };
   }
 
-
   let jsonStringToParse = ""; 
 
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: MODEL_NAME,
-      contents: useGrounding ? groundedPrompt : standardPrompt,
+      contents,
       config,
     });
 

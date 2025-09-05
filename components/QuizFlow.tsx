@@ -140,7 +140,7 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
   }
 
   return (
-    <div className="w-full max-w-2xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">
+    <div className="w-full max-w-2xl p-4 sm:p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">
       <h2 className="text-2xl md:text-3xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
         {t('quizFlowTitle', { topic: quizTopic })}
       </h2>

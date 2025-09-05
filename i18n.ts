@@ -7,6 +7,7 @@ const resources = {
     translation: {
       // App
       appName: "QuizMaster AI",
+      initializingApp: "Initializing...",
       footerRights: "QuizMaster AI",
       poweredBy: "Powered by Gemini AI.",
       playingAs: "Playing as:",
@@ -44,7 +45,7 @@ const resources = {
       profileUpdatedSuccess: "Profile updated successfully!",
       // TopicForm
       topicFormTitle: "Enter a topic to start your quiz:", 
-      topicFormLabel: "Enter a topic (e.g., \"Roman History\", \"Quantum Physics Basics\")",
+      topicFormLabel: "Enter a topic (e.g., \"Roman History\")",
       topicFormPlaceholder: "e.g., The Solar System",
       generateQuizButton: "Generate Quiz",
       generatingButton: "Generating...",
@@ -54,6 +55,14 @@ const resources = {
       difficultyHard: "Hard",
       useGroundingLabel: "Use Google Search for up-to-date topics",
       useGroundingTooltip: "Best for recent events. May take longer.",
+      textPromptTab: "From Text",
+      imagePromptTab: "From Image",
+      dropImageHere: "Drop image here or click to select",
+      imageContextPromptLabel: "Optional: Add context or instructions",
+      imageContextPromptPlaceholder: "e.g., 'Focus on the historical context'",
+      generatingFromImage: "Analyzing image...",
+      imageQuizTopic: "Quiz about your image",
+      changeImageButton: "Change Image",
       // Daily Challenge
       dailyChallengeTitle: "Daily Challenge",
       playChallengeButton: "Play Challenge",
@@ -70,6 +79,8 @@ const resources = {
       // ErrorDisplay
       errorTitle: "Oops! Something went wrong.",
       tryAgainButton: "Try Again",
+      errorInvalidImageType: "Invalid file type. Please upload a PNG, JPG, or WEBP image.",
+      errorImageTooLarge: "Image is too large. Please upload a file smaller than {{size}}MB.",
       // QuizFlow
       quizFlowTitle: "{{topic}} Quiz",
       nextQuestionButton: "Next Question",
@@ -148,6 +159,7 @@ const resources = {
     translation: {
       // App
       appName: "QuizMaster AI",
+      initializingApp: "Inicializácia...",
       footerRights: "QuizMaster AI",
       poweredBy: "Vytvorené s Gemini AI.",
       playingAs: "Hráš ako:",
@@ -185,7 +197,7 @@ const resources = {
       profileUpdatedSuccess: "Profil úspešne aktualizovaný!",
       // TopicForm
       topicFormTitle: "Zadajte tému na spustenie kvízu:", 
-      topicFormLabel: "Zadajte tému (napr. \"Rímska história\", \"Základy kvantovej fyziky\")",
+      topicFormLabel: "Zadajte tému (napr. \"Rímska história\")",
       topicFormPlaceholder: "napr. Slnečná sústava",
       generateQuizButton: "Generovať kvíz",
       generatingButton: "Generujem...",
@@ -195,6 +207,14 @@ const resources = {
       difficultyHard: "Ťažká",
       useGroundingLabel: "Použiť Google Vyhľadávanie pre aktuálne témy",
       useGroundingTooltip: "Najlepšie pre nedávne udalosti. Môže trvať dlhšie.",
+      textPromptTab: "Z textu",
+      imagePromptTab: "Z obrázka",
+      dropImageHere: "Presuňte obrázok sem alebo kliknite pre výber",
+      imageContextPromptLabel: "Voliteľné: Pridajte kontext alebo inštrukcie",
+      imageContextPromptPlaceholder: "napr. 'Zamerajte sa na historický kontext'",
+      generatingFromImage: "Analyzujem obrázok...",
+      imageQuizTopic: "Kvíz o vašom obrázku",
+      changeImageButton: "Zmeniť obrázok",
       // Daily Challenge
       dailyChallengeTitle: "Denná Výzva",
       playChallengeButton: "Hrať Výzvu",
@@ -213,6 +233,8 @@ const resources = {
       // ErrorDisplay
       errorTitle: "Ups! Niečo sa pokazilo.",
       tryAgainButton: "Skúsiť znova",
+      errorInvalidImageType: "Neplatný typ súboru. Prosím, nahrajte obrázok vo formáte PNG, JPG, alebo WEBP.",
+      errorImageTooLarge: "Obrázok je príliš veľký. Prosím, nahrajte súbor menší ako {{size}}MB.",
       // QuizFlow
       quizFlowTitle: "{{topic}} kvíz",
       nextQuestionButton: "Ďalšia otázka",

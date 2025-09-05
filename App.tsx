@@ -1,14 +1,16 @@
 
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, User, GroundingChunk, ChallengeStatus } from './types';
+import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, User, GroundingChunk, ChallengeStatus, ImagePayload } from './types';
 import { generateQuizFromTopic } from './services/geminiService';
 import { postScore } from './services/leaderboardService';
 import { getDailyChallengeTopic, getChallengeStatus, completeDailyChallenge, CHALLENGE_BASE_XP_REWARD, CHALLENGE_STREAK_XP_BONUS_PER_DAY } from './services/challengeService';
 import { getPlayerStats, addXp } from './services/playerStatsService';
 import { checkAndUnlockAchievements } from './services/achievementsService';
 import * as authService from './services/authService';
+import { supabase } from './services/supabaseClient';
 import Header from './components/Header';
 import TopicForm from './components/TopicForm';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -54,7 +56,7 @@ const App: React.FC = () => {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [sources, setSources] = useState<GroundingChunk[] | null>(null);
   const [points, setPoints] = useState<number>(0);
-  const [quizState, setQuizState] = useState<QuizState>(QuizState.GENERATING); // Start in a loading state
+  const [quizState, setQuizState] = useState<QuizState>(QuizState.INITIALIZING); // Start in an initializing state
   const [error, setError] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
   const [isSubmittingScore, setIsSubmittingScore] = useState<boolean>(false);
@@ -84,19 +86,49 @@ const App: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  useEffect(() => {
+ useEffect(() => {
     setDailyChallengeTopic(getDailyChallengeTopic());
 
-    const user = authService.getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      setPlayerStats(getPlayerStats(user.email));
-      setChallengeStatus(getChallengeStatus(user.email));
-      setQuizState(QuizState.IDLE);
-    } else {
-      setQuizState(QuizState.AUTH);
-    }
-  }, []);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+            const userProfile = await authService.getUserProfile(session.user.id);
+            if (userProfile) {
+                setCurrentUser(userProfile);
+                const stats = await getPlayerStats(userProfile.id);
+                setPlayerStats(stats);
+                setChallengeStatus(getChallengeStatus(userProfile.id));
+                 if (quizState === QuizState.AUTH || quizState === QuizState.INITIALIZING) {
+                    setQuizState(QuizState.IDLE);
+                }
+            } else {
+                 // This can happen if profile creation is pending or failed.
+                 // For this app, we'll treat it as logged out.
+                 await authService.logout();
+                 setCurrentUser(null);
+                 setQuizState(QuizState.AUTH);
+            }
+        } else {
+            setCurrentUser(null);
+            setPlayerStats(null);
+            setChallengeStatus(null);
+            setQuizState(QuizState.AUTH);
+        }
+    });
+    
+     // Check initial session
+    const checkInitialSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+             setQuizState(QuizState.AUTH);
+        }
+    };
+    checkInitialSession();
+
+
+    return () => {
+        subscription.unsubscribe();
+    };
+}, [quizState]);
 
   useEffect(() => {
     localStorage.setItem(SOUND_ENABLED_KEY, String(isSoundEnabled));
@@ -106,10 +138,11 @@ const App: React.FC = () => {
     setIsSoundEnabled(prev => !prev);
   };
 
-  const handleAuthSuccess = (user: User, isNewUser: boolean) => {
+  const handleAuthSuccess = async (user: User, isNewUser: boolean) => {
     setCurrentUser(user);
-    setPlayerStats(getPlayerStats(user.email));
-    setChallengeStatus(getChallengeStatus(user.email));
+    const stats = await getPlayerStats(user.id);
+    setPlayerStats(stats);
+    setChallengeStatus(getChallengeStatus(user.id));
     if (isNewUser) {
         setQuizState(QuizState.PROFILE_SETUP);
     } else {
@@ -117,27 +150,30 @@ const App: React.FC = () => {
     }
   };
   
-  const handleLogout = () => {
-    authService.logout();
-    setCurrentUser(null);
-    setPlayerStats(null);
-    setChallengeStatus(null);
-    setQuizState(QuizState.AUTH);
+  const handleLogout = async () => {
+    await authService.logout();
+    // onAuthStateChange will handle the state updates
   };
 
-  const handleGenerateQuiz = useCallback(async (currentTopic: string, currentDifficulty: Difficulty, useGrounding: boolean, isChallenge: boolean = false) => {
+  const handleGenerateQuiz = useCallback(async (
+    topicOrContext: string, 
+    currentDifficulty: Difficulty, 
+    useGrounding: boolean, 
+    isChallenge: boolean = false,
+    imagePayload: ImagePayload | null = null
+  ) => {
     if (!currentUser) return;
     setIsChallengeQuiz(isChallenge);
-    setTopic(currentTopic);
+    setTopic(imagePayload ? (topicOrContext || t('imageQuizTopic')) : topicOrContext);
     setDifficulty(currentDifficulty);
     setQuizState(QuizState.GENERATING);
     setError(null);
     setSources(null);
     try {
-      const { questions: generatedQuestions, sources: generatedSources } = await generateQuizFromTopic(currentTopic, currentDifficulty, useGrounding, currentUser.occupation);
+      const { questions: generatedQuestions, sources: generatedSources } = await generateQuizFromTopic(topicOrContext, currentDifficulty, useGrounding, currentUser.occupation, imagePayload);
       if (generatedQuestions && generatedQuestions.length > 0) {
         const xpForStarting = 10;
-        const { newStats } = addXp(currentUser.email, xpForStarting);
+        const { newStats } = await addXp(currentUser.id, xpForStarting);
         setPlayerStats(newStats);
         addToast(t('xpForStartingQuiz', { xp: xpForStarting }), 'info', <SparklesIcon className="w-5 h-5" />);
 
@@ -162,8 +198,8 @@ const App: React.FC = () => {
     setIsSubmittingScore(true);
     try {
       await postScore({
+        userId: currentUser.id,
         playerName: currentUser.playerName,
-        userEmail: currentUser.email,
         avatarId: currentUser.avatar,
         topic: currentTopic,
         points: totalPoints,
@@ -177,7 +213,7 @@ const App: React.FC = () => {
 
   const saveQuizToHistory = useCallback((currentTopic: string, totalPoints: number, answeredQuestions: QuizQuestion[], currentDifficulty: Difficulty) => {
     if (!currentUser) return;
-    const historyKey = `${HISTORY_KEY_PREFIX}${currentUser.email}`;
+    const historyKey = `${HISTORY_KEY_PREFIX}${currentUser.id}`;
     const newEntry: QuizHistoryEntry = {
       id: crypto.randomUUID(),
       topic: currentTopic,
@@ -201,7 +237,7 @@ const App: React.FC = () => {
     localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 50))); // Keep last 50
   }, [currentUser]);
 
-  const handleQuizComplete = useCallback((totalPoints: number, answeredQuestions: QuizQuestion[]) => {
+  const handleQuizComplete = useCallback(async (totalPoints: number, answeredQuestions: QuizQuestion[]) => {
     if (!currentUser) return;
     
     setPoints(totalPoints);
@@ -217,7 +253,7 @@ const App: React.FC = () => {
     
     let bonusInfo: ChallengeBonusInfo | null = null;
     if (isChallengeQuiz) {
-        const { newStreak } = completeDailyChallenge(currentUser.email);
+        const { newStreak } = completeDailyChallenge(currentUser.id);
         const baseBonus = CHALLENGE_BASE_XP_REWARD;
         const streakBonus = newStreak * CHALLENGE_STREAK_XP_BONUS_PER_DAY;
         totalXp += baseBonus + streakBonus;
@@ -230,7 +266,7 @@ const App: React.FC = () => {
     }
 
 
-    const { newStats, leveledUp, xpGained } = addXp(currentUser.email, totalXp);
+    const { newStats, leveledUp, xpGained } = await addXp(currentUser.id, totalXp);
     setLastXpGained(xpGained);
     setPlayerStats(newStats);
 
@@ -238,8 +274,8 @@ const App: React.FC = () => {
       addToast(t('levelUpMessage', { level: newStats.level }), 'success', <TrophyIcon className="w-5 h-5" />);
     }
 
-    const newAchievements = checkAndUnlockAchievements({
-      email: currentUser.email,
+    const newAchievements = await checkAndUnlockAchievements({
+      userId: currentUser.id,
       correctAnswers,
       totalQuestions,
     });
@@ -268,18 +304,21 @@ const App: React.FC = () => {
     setQuizState(QuizState.IDLE);
   };
 
-  const handleProfileSetupComplete = (occupation: string) => {
+  const handleProfileSetupComplete = async (occupation: string) => {
     if (!currentUser) return;
-    authService.updateUserProfile(currentUser.email, { occupation })
-      .then(updatedUser => {
+    try {
+        const updatedUser = await authService.updateUserProfile(currentUser.id, { occupation });
         setCurrentUser(updatedUser);
         setQuizState(QuizState.IDLE);
-      })
-      .catch(console.error);
+    } catch(err) {
+        console.error(err);
+    }
   };
 
   const renderContent = () => {
     switch (quizState) {
+      case QuizState.INITIALIZING:
+        return <LoadingSpinner message={t('initializingApp')} />;
       case QuizState.AUTH:
         return <AuthFlow onAuthSuccess={handleAuthSuccess} />;
       case QuizState.PROFILE_SETUP:
@@ -314,20 +353,27 @@ const App: React.FC = () => {
       case QuizState.ERROR:
         return <ErrorDisplay message={error || t('errorUnknownQuizGeneration')} onRetry={handleRestart} />;
       case QuizState.SHOW_LEADERBOARD:
-        return leaderboardConfig && <LeaderboardDisplay onBack={handleRestart} userEmail={currentUser?.email || null} title={leaderboardConfig.title} topicFilter={leaderboardConfig.topicFilter} />;
+        return leaderboardConfig && <LeaderboardDisplay onBack={handleRestart} userId={currentUser?.id || null} title={leaderboardConfig.title} topicFilter={leaderboardConfig.topicFilter} />;
       case QuizState.SHOW_HISTORY:
-        return <QuizHistoryDisplay onBack={handleRestart} playerIdentifier={currentUser?.email || null} />;
+        return <QuizHistoryDisplay onBack={handleRestart} playerIdentifier={currentUser?.id || null} />;
       case QuizState.SHOW_ACHIEVEMENTS:
-        return <AchievementsDisplay onBack={handleRestart} playerIdentifier={currentUser?.email || null} />;
+        return <AchievementsDisplay onBack={handleRestart} playerIdentifier={currentUser?.id || null} />;
       case QuizState.IDLE:
       default:
         return (
           <div className="w-full max-w-lg">
-            <TopicForm onGenerateQuiz={(...args) => handleGenerateQuiz(...args, false)} isGenerating={false} />
+            <TopicForm 
+              onGenerateQuiz={(topicOrContext, difficulty, useGrounding, imagePayload) => 
+                handleGenerateQuiz(topicOrContext, difficulty, useGrounding, false, imagePayload)
+              } 
+              isGenerating={false} 
+            />
             <DailyChallengeDisplay
               dailyChallengeTopic={dailyChallengeTopic}
               challengeStatus={challengeStatus}
-              onPlay={handleGenerateQuiz}
+              onPlay={(topic, difficulty, useGrounding, isChallenge) => 
+                handleGenerateQuiz(topic, difficulty, useGrounding, isChallenge, null)
+              }
               onViewLeaderboard={() => {
                 setLeaderboardConfig({ title: t('dailyChallengeLeaderboardTitle'), topicFilter: dailyChallengeTopic });
                 setQuizState(QuizState.SHOW_LEADERBOARD);
@@ -363,7 +409,7 @@ const App: React.FC = () => {
                 <p className="font-bold text-lg text-slate-100">{currentUser.playerName}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
               <LinkButton onClick={() => setQuizState(QuizState.SHOW_HISTORY)}>{t('viewHistoryButton')}</LinkButton>
               <LinkButton onClick={() => { setLeaderboardConfig({ title: t('leaderboardTitle') }); setQuizState(QuizState.SHOW_LEADERBOARD); }}>{t('viewLeaderboardButton')}</LinkButton>
               <LinkButton onClick={() => setQuizState(QuizState.SHOW_ACHIEVEMENTS)}>{t('viewAchievementsButton')}</LinkButton>

@@ -1,23 +1,13 @@
 import { PlayerStats } from '../types';
+import { supabase } from './supabaseClient';
 
-const STATS_KEY_PREFIX = 'quizMasterStats_';
 const BASE_XP = 500;
 const LEVEL_SCALING_FACTOR = 1.2;
 
-/**
- * Calculates the XP required to advance from a given level to the next.
- * @param level The current level.
- * @returns The amount of XP needed to reach the next level.
- */
 export const getXpForNextLevel = (level: number): number => {
   return Math.floor(BASE_XP * Math.pow(LEVEL_SCALING_FACTOR, level - 1));
 };
 
-/**
- * Calculates the player's level based on their total XP.
- * @param xp The player's total experience points.
- * @returns The calculated level.
- */
 const calculateLevelFromXp = (xp: number): number => {
   let level = 1;
   let xpForNext = getXpForNextLevel(level);
@@ -30,23 +20,22 @@ const calculateLevelFromXp = (xp: number): number => {
 };
 
 /**
- * Gets player stats from localStorage, or returns default stats.
+ * Gets player stats from Supabase, or returns default stats if not found.
  */
-export const getPlayerStats = (email: string): PlayerStats => {
-  const key = `${STATS_KEY_PREFIX}${email}`;
-  const stored = localStorage.getItem(key);
-  if (stored) {
-    return JSON.parse(stored);
+export const getPlayerStats = async (userId: string): Promise<PlayerStats> => {
+  if (!userId) return { xp: 0, level: 1 };
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('xp, level')
+    .eq('id', userId)
+    .single();
+  
+  if (error || !data) {
+    console.warn("Could not fetch player stats for user:", userId, error?.message);
+    return { xp: 0, level: 1 };
   }
-  return { xp: 0, level: 1 };
-};
-
-/**
- * Saves player stats to localStorage.
- */
-const savePlayerStats = (email: string, stats: PlayerStats) => {
-  const key = `${STATS_KEY_PREFIX}${email}`;
-  localStorage.setItem(key, JSON.stringify(stats));
+  return { xp: data.xp || 0, level: data.level || 1 };
 };
 
 interface AddXpResult {
@@ -56,13 +45,14 @@ interface AddXpResult {
 }
 
 /**
- * Adds XP to a player's stats, checks for level ups, and saves the new stats.
+ * Adds XP to a player's stats in Supabase, checks for level ups, and saves the new stats.
  */
-export const addXp = (email: string, amount: number): AddXpResult => {
-  if (!email) {
+export const addXp = async (userId: string, amount: number): Promise<AddXpResult> => {
+  if (!userId) {
     return { newStats: { xp: 0, level: 1 }, leveledUp: false, xpGained: 0 };
   }
-  const currentStats = getPlayerStats(email);
+  
+  const currentStats = await getPlayerStats(userId);
   
   let totalXpGained = amount;
   let newXp = currentStats.xp + amount;
@@ -70,8 +60,6 @@ export const addXp = (email: string, amount: number): AddXpResult => {
   let previousLevel = currentStats.level;
   let newLevel = calculateLevelFromXp(newXp);
 
-  // If a level up occurs, add bonus XP and re-calculate.
-  // This loop handles multiple level-ups from a single large XP gain.
   while (newLevel > previousLevel) {
     const levelsGained = newLevel - previousLevel;
     const bonusXp = levelsGained * 1000;
@@ -85,16 +73,22 @@ export const addXp = (email: string, amount: number): AddXpResult => {
 
   const leveledUp = newLevel > currentStats.level;
   const newStats: PlayerStats = { xp: newXp, level: newLevel };
-  savePlayerStats(email, newStats);
+
+  // Save the new stats to Supabase
+  const { error } = await supabase
+    .from('profiles')
+    .update({ xp: newStats.xp, level: newStats.level })
+    .eq('id', userId);
+
+  if (error) {
+    console.error("Failed to save player stats:", error);
+    // Return original stats if save fails, to avoid UI inconsistency
+    return { newStats: currentStats, leveledUp: false, xpGained: 0 };
+  }
 
   return { newStats, leveledUp, xpGained: totalXpGained };
 };
 
-/**
- * Calculates the current XP progress towards the next level.
- * @param stats The player's current stats.
- * @returns An object with current progress and total needed for next level.
- */
 export const getXpProgress = (stats: PlayerStats): { current: number, total: number } => {
   let totalXpForCurrentLevel = 0;
   for (let i = 1; i < stats.level; i++) {

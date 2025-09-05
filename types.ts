@@ -8,6 +8,7 @@ export interface QuizQuestion {
 }
 
 export enum QuizState {
+  INITIALIZING = 'initializing',
   AUTH = 'auth', // New state for login/signup
   PROFILE_SETUP = 'profile_setup', // New state for post-signup setup
   IDLE = 'idle',
@@ -39,13 +40,13 @@ export interface GroundingChunk {
 }
 
 export interface LeaderboardEntry {
-  id: string;
+  id: number;
+  userId: string;
   playerName: string;
-  userEmail: string; // To uniquely identify the user
-  avatarId: string; // To display the user's avatar
+  avatarId: string;
   topic: string;
   points: number;
-  timestamp: number; // Unix timestamp
+  timestamp: number;
 }
 
 export interface LeaderboardFilters {
@@ -83,6 +84,7 @@ export interface ToastMessage {
 }
 
 export interface User {
+  id: string; // Supabase user ID
   email: string;
   playerName: string;
   avatar: string;
@@ -93,4 +95,9 @@ export interface User {
 export interface ChallengeStatus {
   streak: number;
   completedToday: boolean;
+}
+
+export interface ImagePayload {
+  mimeType: string;
+  data: string; // base64 encoded string
 }

@@ -1,6 +1,6 @@
 import { Achievement, QuizHistoryEntry } from '../types';
+import { supabase } from './supabaseClient';
 
-const ACHIEVEMENTS_KEY_PREFIX = 'quizMasterAchievements_';
 const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
 
 // Define all possible achievements in the game
@@ -18,24 +18,42 @@ export const ALL_ACHIEVEMENTS: Record<string, Achievement> = {
 };
 
 /**
- * Gets the set of unlocked achievement IDs for a player from localStorage.
+ * Gets the set of unlocked achievement IDs for a player from their Supabase profile.
  */
-export const getUnlockedAchievementIds = (email: string): Set<string> => {
-  const key = `${ACHIEVEMENTS_KEY_PREFIX}${email}`;
-  const stored = localStorage.getItem(key);
-  return stored ? new Set(JSON.parse(stored)) : new Set();
+export const getUnlockedAchievementIds = async (userId: string): Promise<Set<string>> => {
+  if (!userId) return new Set();
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('unlocked_achievements')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data || !data.unlocked_achievements) {
+    console.warn("Could not get unlocked achievements:", error?.message);
+    return new Set();
+  }
+  
+  return new Set(data.unlocked_achievements);
 };
 
 /**
- * Saves the set of unlocked achievement IDs for a player to localStorage.
+ * Saves the array of unlocked achievement IDs for a player to their Supabase profile.
  */
-const saveUnlockedAchievements = (email: string, unlockedIds: Set<string>) => {
-  const key = `${ACHIEVEMENTS_KEY_PREFIX}${email}`;
-  localStorage.setItem(key, JSON.stringify(Array.from(unlockedIds)));
+const saveUnlockedAchievements = async (userId: string, unlockedIds: Set<string>) => {
+  const achievementsArray = Array.from(unlockedIds);
+  const { error } = await supabase
+    .from('profiles')
+    .update({ unlocked_achievements: achievementsArray })
+    .eq('id', userId);
+  
+  if (error) {
+    console.error("Failed to save unlocked achievements:", error);
+  }
 };
 
 interface CheckAchievementsParams {
-  email: string;
+  userId: string;
   correctAnswers: number;
   totalQuestions: number;
 }
@@ -44,19 +62,20 @@ interface CheckAchievementsParams {
  * Checks for new achievements based on the latest quiz results and player history.
  * @returns An array of newly unlocked achievements.
  */
-export const checkAndUnlockAchievements = (
-  { email, correctAnswers, totalQuestions }: CheckAchievementsParams
-): Achievement[] => {
-  const unlockedIds = getUnlockedAchievementIds(email);
+export const checkAndUnlockAchievements = async (
+  { userId, correctAnswers, totalQuestions }: CheckAchievementsParams
+): Promise<Achievement[]> => {
+  const unlockedIds = await getUnlockedAchievementIds(userId);
   const newlyUnlocked: Achievement[] = [];
   
-  const historyKey = `${HISTORY_KEY_PREFIX}${email}`;
+  // History is still in localStorage, so we can check it synchronously.
+  const historyKey = `${HISTORY_KEY_PREFIX}${userId}`;
   const storedHistory = localStorage.getItem(historyKey);
   const history: QuizHistoryEntry[] = storedHistory ? JSON.parse(storedHistory) : [];
 
   // Check for 'FIRST_QUIZ'
   if (!unlockedIds.has(ALL_ACHIEVEMENTS.FIRST_QUIZ.id)) {
-    // Since history is saved *after* this check, a history length of 0 means this is the first one.
+    // A history length of 0 means this is the first one just completed.
     if (history.length === 0) {
       newlyUnlocked.push(ALL_ACHIEVEMENTS.FIRST_QUIZ);
       unlockedIds.add(ALL_ACHIEVEMENTS.FIRST_QUIZ.id);
@@ -72,7 +91,7 @@ export const checkAndUnlockAchievements = (
   }
 
   if (newlyUnlocked.length > 0) {
-    saveUnlockedAchievements(email, unlockedIds);
+    await saveUnlockedAchievements(userId, unlockedIds);
   }
 
   return newlyUnlocked;

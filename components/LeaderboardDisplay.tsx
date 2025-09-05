@@ -10,7 +10,7 @@ import MedalIcon from './icons/MedalIcon';
 
 interface LeaderboardDisplayProps {
   onBack: () => void;
-  userEmail: string | null;
+  userId: string | null;
   title: string;
   topicFilter?: string;
 }
@@ -19,7 +19,7 @@ interface DisplayEntry extends LeaderboardEntry {
   isNew?: boolean;
 }
 
-const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEmail, title, topicFilter }) => {
+const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userId, title, topicFilter }) => {
   const { t, i18n } = useTranslation();
   const [leaderboard, setLeaderboard] = useState<DisplayEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -30,7 +30,7 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
   });
   
   // Ref to track IDs of entries from the previous fetch to identify new ones.
-  const previousEntryIds = useRef(new Set<string>());
+  const previousEntryIds = useRef(new Set<number>());
 
   const fetchLeaderboard = useCallback(async () => {
     // Don't show loading spinner on subsequent polls, only on initial load or filter change
@@ -86,10 +86,39 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
     setFilters(prev => ({ ...prev, ...newFilters }));
   }
   
+  const renderLeaderboardCard = (entry: DisplayEntry, rank: number) => {
+    const isCurrentUser = userId && entry.userId === userId;
+    let cardClasses = 'p-4 rounded-lg shadow transition-colors duration-300';
+    if (isCurrentUser) cardClasses += ' bg-purple-900/60 border-l-4 border-purple-500';
+    else cardClasses += ' bg-slate-700';
+     if (entry.isNew && !isCurrentUser) cardClasses += ' animate-highlight-fade';
+    
+    return (
+        <div key={entry.id} className={cardClasses}>
+            <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                     <div className="flex items-center justify-center font-bold text-slate-100 w-8 text-center">
+                        {rank <= 3 && filters.topic === '' ? <MedalIcon rank={rank} className="w-6 h-6" /> : <span>#{rank}</span>}
+                    </div>
+                    <Avatar avatarId={entry.avatarId} className="w-10 h-10 rounded-full flex-shrink-0" />
+                    <div className="flex-grow min-w-0">
+                        <p className="font-semibold text-white truncate">{entry.playerName}</p>
+                        <p className="text-xs text-slate-400">{formatDate(entry.timestamp)}</p>
+                    </div>
+                </div>
+                <div className="text-right flex-shrink-0 pl-2">
+                    <p className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">{entry.points}</p>
+                </div>
+            </div>
+            <p className="mt-2 text-sm text-slate-300 break-words pl-11">{entry.topic}</p>
+        </div>
+    );
+  };
+  
   const renderLeaderboardRows = (entries: DisplayEntry[], rankOffset: number = 0) => {
     return entries.map((entry, index) => {
         const rank = rankOffset + index + 1;
-        const isCurrentUser = userEmail && entry.userEmail === userEmail;
+        const isCurrentUser = userId && entry.userId === userId;
         
         let rowClasses = 'border-b border-slate-700 transition-all duration-200';
         if (entry.isNew && !isCurrentUser) rowClasses += ' animate-highlight-fade';
@@ -146,7 +175,7 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
 
     const fullLeaderboard = leaderboard;
     const top10 = fullLeaderboard.slice(0, 10);
-    const playerIndex = userEmail ? fullLeaderboard.findIndex(e => e.userEmail === userEmail) : -1;
+    const playerIndex = userId ? fullLeaderboard.findIndex(e => e.userId === userId) : -1;
     const isPlayerInTop10 = playerIndex !== -1 && playerIndex < 10;
     const shouldShowPlayerRank = playerIndex !== -1 && !isPlayerInTop10;
 
@@ -158,9 +187,25 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
     }
 
     return (
-        <div className="overflow-x-auto">
+      <div className="max-h-[60vh] overflow-y-auto pr-2">
+        {/* Mobile View: Card List */}
+        <div className="sm:hidden space-y-3">
+          {top10.map((entry, index) => renderLeaderboardCard(entry, index + 1))}
+          {shouldShowPlayerRank && (
+            <>
+              <div className="text-center py-2 text-slate-500 font-bold tracking-widest">...</div>
+              {playerAndNeighbors.map((entry) => {
+                  const rank = fullLeaderboard.findIndex(e => e.id === entry.id);
+                  return renderLeaderboardCard(entry, rank + 1);
+              })}
+            </>
+          )}
+        </div>
+        
+        {/* Desktop View: Table */}
+        <div className="hidden sm:block">
             <table className="w-full min-w-max text-sm text-left text-slate-300">
-            <thead className="text-sm font-semibold text-purple-300 uppercase bg-slate-900/70">
+            <thead className="text-sm font-semibold text-purple-300 uppercase bg-slate-900/70 sticky top-0">
                 <tr>
                     <th scope="col" className="px-4 py-3 w-16 text-center">{t('leaderboardRank')}</th>
                     <th scope="col" className="px-4 py-3">{t('leaderboardPlayer')}</th>
@@ -182,11 +227,12 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
             </tbody>
             </table>
         </div>
+      </div>
     );
   }
 
   return (
-    <div className="w-full max-w-4xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">
+    <div className="w-full max-w-4xl p-4 sm:p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">
       <h2 className="text-3xl md:text-4xl font-extrabold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
         {title}
       </h2>

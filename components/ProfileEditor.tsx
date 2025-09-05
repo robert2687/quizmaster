@@ -1,4 +1,6 @@
 
+
+
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User } from '../types';
@@ -29,7 +31,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUser, onProfileUpd
     setIsLoading(true);
     setError(null);
     try {
-      const updatedUser = await authService.updateUserProfile(currentUser.email, {
+      const updatedUser = await authService.updateUserProfile(currentUser.id, {
         playerName: playerName.trim(),
         avatar: selectedAvatar,
         bio: bio.trim(),
@@ -50,7 +52,7 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({ currentUser, onProfileUpd
       <form onSubmit={handleSave} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">{t('avatarLabel')}</label>
-          <div className="grid grid-cols-6 gap-2">
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
             {AVATAR_OPTIONS.map(avatarId => (
               <button
                 key={avatarId}

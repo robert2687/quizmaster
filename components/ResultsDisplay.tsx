@@ -67,7 +67,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
   };
 
   return (
-    <div className="w-full max-w-2xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl relative z-10">
+    <div className="w-full max-w-2xl p-4 sm:p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl relative z-10">
       {percentage === 100 && <Confetti />}
       <h2 className="text-3xl md:text-4xl font-extrabold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
         {t('resultsTitle')}
