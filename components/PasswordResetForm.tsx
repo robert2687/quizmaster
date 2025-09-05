@@ -17,7 +17,7 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onPasswordUpdated
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+      setError(t('passwordLengthError'));
       return;
     }
     if (password !== confirmPassword) {

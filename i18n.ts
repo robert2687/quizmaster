@@ -44,6 +44,8 @@ const resources = {
       updatePasswordButton: "Update Password",
       passwordUpdateSuccess: "Password updated successfully! You can now log in with your new password.",
       passwordsDoNotMatchError: "The passwords do not match.",
+      passwordLengthError: "Password must be at least 6 characters long.",
+      forgotPasswordError: "Could not send reset link. Please check the email address and try again.",
       // Occupation Selector
       occupationSelectorTitle: "What is your occupation?",
       occupationSelectorSubtitle: "Select one to help us personalize your quiz experience (optional).",
@@ -211,6 +213,8 @@ const resources = {
       updatePasswordButton: "Aktualizovať heslo",
       passwordUpdateSuccess: "Heslo bolo úspešne aktualizované! Teraz sa môžete prihlásiť s novým heslom.",
       passwordsDoNotMatchError: "Heslá sa nezhodujú.",
+      passwordLengthError: "Heslo musí mať aspoň 6 znakov.",
+      forgotPasswordError: "Nepodarilo sa odoslať odkaz na obnovenie. Skontrolujte e-mailovú adresu a skúste to znova.",
       // Occupation Selector
       occupationSelectorTitle: "Aké je vaše povolanie?",
       occupationSelectorSubtitle: "Vyberte jedno, aby sme vám mohli prispôsobiť kvíz (voliteľné).",

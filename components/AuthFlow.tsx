@@ -40,7 +40,15 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthSuccess }) => {
       }
     } catch (err) {
       if (err instanceof Error) {
-        setError(mode === 'login' ? t('authError') : t('signupError'));
+        if (mode === 'login') {
+          setError(t('authError'));
+        } else if (mode === 'signup') {
+          setError(t('signupError'));
+        } else if (mode === 'forgot_password') {
+          setError(t('forgotPasswordError'));
+        } else {
+          setError('An unknown error occurred.');
+        }
       } else {
         setError('An unknown error occurred.');
       }
