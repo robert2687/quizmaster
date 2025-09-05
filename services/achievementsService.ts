@@ -20,8 +20,8 @@ export const ALL_ACHIEVEMENTS: Record<string, Achievement> = {
 /**
  * Gets the set of unlocked achievement IDs for a player from localStorage.
  */
-export const getUnlockedAchievementIds = (playerName: string): Set<string> => {
-  const key = `${ACHIEVEMENTS_KEY_PREFIX}${playerName}`;
+export const getUnlockedAchievementIds = (email: string): Set<string> => {
+  const key = `${ACHIEVEMENTS_KEY_PREFIX}${email}`;
   const stored = localStorage.getItem(key);
   return stored ? new Set(JSON.parse(stored)) : new Set();
 };
@@ -29,13 +29,13 @@ export const getUnlockedAchievementIds = (playerName: string): Set<string> => {
 /**
  * Saves the set of unlocked achievement IDs for a player to localStorage.
  */
-const saveUnlockedAchievements = (playerName: string, unlockedIds: Set<string>) => {
-  const key = `${ACHIEVEMENTS_KEY_PREFIX}${playerName}`;
+const saveUnlockedAchievements = (email: string, unlockedIds: Set<string>) => {
+  const key = `${ACHIEVEMENTS_KEY_PREFIX}${email}`;
   localStorage.setItem(key, JSON.stringify(Array.from(unlockedIds)));
 };
 
 interface CheckAchievementsParams {
-  playerName: string;
+  email: string;
   correctAnswers: number;
   totalQuestions: number;
 }
@@ -45,12 +45,12 @@ interface CheckAchievementsParams {
  * @returns An array of newly unlocked achievements.
  */
 export const checkAndUnlockAchievements = (
-  { playerName, correctAnswers, totalQuestions }: CheckAchievementsParams
+  { email, correctAnswers, totalQuestions }: CheckAchievementsParams
 ): Achievement[] => {
-  const unlockedIds = getUnlockedAchievementIds(playerName);
+  const unlockedIds = getUnlockedAchievementIds(email);
   const newlyUnlocked: Achievement[] = [];
   
-  const historyKey = `${HISTORY_KEY_PREFIX}${playerName}`;
+  const historyKey = `${HISTORY_KEY_PREFIX}${email}`;
   const storedHistory = localStorage.getItem(historyKey);
   const history: QuizHistoryEntry[] = storedHistory ? JSON.parse(storedHistory) : [];
 
@@ -72,7 +72,7 @@ export const checkAndUnlockAchievements = (
   }
 
   if (newlyUnlocked.length > 0) {
-    saveUnlockedAchievements(playerName, unlockedIds);
+    saveUnlockedAchievements(email, unlockedIds);
   }
 
   return newlyUnlocked;

@@ -1,3 +1,4 @@
+
 export interface QuizQuestion {
   id: string;
   question: string;
@@ -7,7 +8,7 @@ export interface QuizQuestion {
 }
 
 export enum QuizState {
-  PLAYER_SETUP = 'player_setup', // New state for initial player name entry
+  AUTH = 'auth', // New state for login/signup
   IDLE = 'idle',
   GENERATING = 'generating',
   IN_PROGRESS = 'inProgress',
@@ -16,6 +17,7 @@ export enum QuizState {
   SHOW_LEADERBOARD = 'show_leaderboard',
   SHOW_HISTORY = 'show_history',
   SHOW_ACHIEVEMENTS = 'show_achievements',
+  EDIT_PROFILE = 'edit_profile',
 }
 
 export enum Difficulty {
@@ -24,13 +26,15 @@ export enum Difficulty {
   HARD = 'Hard',
 }
 
+// FIX: Made properties optional to match the @google/genai SDK types.
 export interface GroundingChunkWeb {
-  uri: string;
-  title: string;
+  uri?: string;
+  title?: string;
 }
 
+// FIX: Made 'web' property optional to match the @google/genai SDK types.
 export interface GroundingChunk {
-  web: GroundingChunkWeb;
+  web?: GroundingChunkWeb;
 }
 
 export interface LeaderboardEntry {
@@ -73,4 +77,11 @@ export interface ToastMessage {
   message: string;
   type: 'success' | 'info';
   icon?: React.ReactNode;
+}
+
+export interface User {
+  email: string;
+  playerName: string;
+  avatar: string;
+  bio: string;
 }

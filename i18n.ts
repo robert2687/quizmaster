@@ -10,17 +10,33 @@ const resources = {
       footerRights: "QuizMaster AI",
       poweredBy: "Powered by Gemini AI.",
       playingAs: "Playing as:",
-      changePlayer: "(Change)",
+      logoutButton: "Logout",
       soundOn: "Enable sound effects",
       soundOff: "Disable sound effects",
       // Header
       headerSubtitle: "Generate engaging quizzes on any topic in seconds!",
-      // PlayerNameSetup
-      welcomeTitle: "Welcome to QuizMaster AI!",
-      welcomeSubtitle: "Enter your player name to get on the leaderboard.",
+      // AuthFlow
+      loginTitle: "Login",
+      signupTitle: "Create Account",
+      emailLabel: "Email",
+      passwordLabel: "Password",
       playerNameLabel: "Player Name",
       playerNamePlaceholder: "Enter your name...",
-      letsPlayButton: "Let's Play!",
+      loginButton: "Login",
+      signupButton: "Sign Up",
+      switchToSignup: "Don't have an account? Sign Up",
+      switchToLogin: "Already have an account? Login",
+      authError: "Authentication failed. Please check your credentials.",
+      signupError: "Could not create account. The email may already be in use.",
+      // Profile Editor
+      profileEditorTitle: "Edit Your Profile",
+      editProfileButton: "Edit Profile",
+      avatarLabel: "Choose Your Avatar",
+      bioLabel: "Your Bio",
+      bioPlaceholder: "Tell us something about yourself...",
+      saveProfileButton: "Save Changes",
+      cancelButton: "Cancel",
+      profileUpdatedSuccess: "Profile updated successfully!",
       // TopicForm
       topicFormTitle: "Enter a topic to start your quiz:", 
       topicFormLabel: "Enter a topic (e.g., \"Roman History\", \"Quantum Physics Basics\")",
@@ -31,6 +47,8 @@ const resources = {
       difficultyEasy: "Easy",
       difficultyMedium: "Medium",
       difficultyHard: "Hard",
+      useGroundingLabel: "Use Google Search for up-to-date topics",
+      useGroundingTooltip: "Best for recent events. May take longer.",
       // LoadingSpinner
       loadingMessageDefault: "Generating your quiz...",
       loadingMessageTopic: "Generating your quiz on \"{{topic}}\"...",
@@ -66,6 +84,7 @@ const resources = {
       copiedButton: "Copied!",
       shareResultsText: "I scored {{points}} points on the \"{{topic}}\" quiz on QuizMaster AI! Beat my score!",
       submittingScore: "Submitting score to the leaderboard...",
+      sourcesTitle: "Sources from Google Search",
       // QuestionDisplay
       questionLabel: "Question {{current}} of {{total}}",
       // Language Switcher
@@ -116,17 +135,33 @@ const resources = {
       footerRights: "QuizMaster AI",
       poweredBy: "Vytvorené s Gemini AI.",
       playingAs: "Hráš ako:",
-      changePlayer: "(Zmeniť)",
+      logoutButton: "Odhlásiť sa",
       soundOn: "Zapnúť zvukové efekty",
       soundOff: "Vypnúť zvukové efekty",
       // Header
       headerSubtitle: "Vytvárajte pútavé kvízy na akúkoľvek tému v priebehu sekúnd!",
-      // PlayerNameSetup
-      welcomeTitle: "Vitajte v QuizMaster AI!",
-      welcomeSubtitle: "Zadajte svoje meno hráča, aby ste sa dostali do rebríčka.",
+      // AuthFlow
+      loginTitle: "Prihlásenie",
+      signupTitle: "Vytvoriť účet",
+      emailLabel: "Email",
+      passwordLabel: "Heslo",
       playerNameLabel: "Meno hráča",
       playerNamePlaceholder: "Zadajte svoje meno...",
-      letsPlayButton: "Poďme hrať!",
+      loginButton: "Prihlásiť sa",
+      signupButton: "Zaregistrovať sa",
+      switchToSignup: "Nemáte účet? Zaregistrujte sa",
+      switchToLogin: "Už máte účet? Prihláste sa",
+      authError: "Prihlásenie zlyhalo. Skontrolujte svoje údaje.",
+      signupError: "Nepodarilo sa vytvoriť účet. Email už môže byť použitý.",
+      // Profile Editor
+      profileEditorTitle: "Upraviť Váš Profil",
+      editProfileButton: "Upraviť Profil",
+      avatarLabel: "Vyberte si Avatara",
+      bioLabel: "Váš Popis",
+      bioPlaceholder: "Povedzte nám niečo o sebe...",
+      saveProfileButton: "Uložiť Zmeny",
+      cancelButton: "Zrušiť",
+      profileUpdatedSuccess: "Profil úspešne aktualizovaný!",
       // TopicForm
       topicFormTitle: "Zadajte tému na spustenie kvízu:", 
       topicFormLabel: "Zadajte tému (napr. \"Rímska história\", \"Základy kvantovej fyziky\")",
@@ -137,6 +172,8 @@ const resources = {
       difficultyEasy: "Ľahká",
       difficultyMedium: "Stredná",
       difficultyHard: "Ťažká",
+      useGroundingLabel: "Použiť Google Vyhľadávanie pre aktuálne témy",
+      useGroundingTooltip: "Najlepšie pre nedávne udalosti. Môže trvať dlhšie.",
       // LoadingSpinner
       loadingMessageDefault: "Generujem váš kvíz...",
       loadingMessageTopic: "Generujem váš kvíz na tému \"{{topic}}\"...",
@@ -173,6 +210,7 @@ const resources = {
       copiedButton: "Skopírované!",
       shareResultsText: "Získal/a som {{points}} bodov v kvíze na tému \"{{topic}}\" v QuizMaster AI! Prekonaj ma!",
       submittingScore: "Odosielam skóre do rebríčka...",
+      sourcesTitle: "Zdroje z Google Vyhľadávania",
       // QuestionDisplay
       questionLabel: "Otázka {{current}} z {{total}}",
       // Language Switcher

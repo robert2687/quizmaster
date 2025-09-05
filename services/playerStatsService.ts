@@ -32,8 +32,8 @@ const calculateLevelFromXp = (xp: number): number => {
 /**
  * Gets player stats from localStorage, or returns default stats.
  */
-export const getPlayerStats = (playerName: string): PlayerStats => {
-  const key = `${STATS_KEY_PREFIX}${playerName}`;
+export const getPlayerStats = (email: string): PlayerStats => {
+  const key = `${STATS_KEY_PREFIX}${email}`;
   const stored = localStorage.getItem(key);
   if (stored) {
     return JSON.parse(stored);
@@ -44,8 +44,8 @@ export const getPlayerStats = (playerName: string): PlayerStats => {
 /**
  * Saves player stats to localStorage.
  */
-const savePlayerStats = (playerName: string, stats: PlayerStats) => {
-  const key = `${STATS_KEY_PREFIX}${playerName}`;
+const savePlayerStats = (email: string, stats: PlayerStats) => {
+  const key = `${STATS_KEY_PREFIX}${email}`;
   localStorage.setItem(key, JSON.stringify(stats));
 };
 
@@ -58,11 +58,11 @@ interface AddXpResult {
 /**
  * Adds XP to a player's stats, checks for level ups, and saves the new stats.
  */
-export const addXp = (playerName: string, amount: number): AddXpResult => {
-  if (!playerName) {
+export const addXp = (email: string, amount: number): AddXpResult => {
+  if (!email) {
     return { newStats: { xp: 0, level: 1 }, leveledUp: false, xpGained: 0 };
   }
-  const currentStats = getPlayerStats(playerName);
+  const currentStats = getPlayerStats(email);
   
   let totalXpGained = amount;
   let newXp = currentStats.xp + amount;
@@ -85,7 +85,7 @@ export const addXp = (playerName: string, amount: number): AddXpResult => {
 
   const leveledUp = newLevel > currentStats.level;
   const newStats: PlayerStats = { xp: newXp, level: newLevel };
-  savePlayerStats(playerName, newStats);
+  savePlayerStats(email, newStats);
 
   return { newStats, leveledUp, xpGained: totalXpGained };
 };

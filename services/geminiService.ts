@@ -1,11 +1,15 @@
 
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type, GroundingChunk } from "@google/genai";
 import { QuizQuestion } from '../types';
 
 // FIX: Updated model name to a stable, recommended version.
 const MODEL_NAME = "gemini-2.5-flash";
 
-export const generateQuizFromTopic = async (topic: string, difficulty: string): Promise<QuizQuestion[]> => {
+export const generateQuizFromTopic = async (
+  topic: string, 
+  difficulty: string, 
+  useGrounding: boolean
+): Promise<{ questions: QuizQuestion[]; sources: GroundingChunk[] | null }> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
     console.error("API key not found. Please set the API_KEY environment variable.");
@@ -14,48 +18,64 @@ export const generateQuizFromTopic = async (topic: string, difficulty: string): 
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // FIX: Simplified prompt as JSON output is enforced by responseSchema.
-  // UPDATE: Added difficulty to the prompt.
-  const prompt = `You are an expert quiz generator.
+  // Prompt for standard, non-grounded generation
+  const standardPrompt = `You are an expert quiz generator.
 Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.
 The quiz should consist of 5 multiple-choice questions.
 Each question must have exactly 4 unique answer options.
 For each question, clearly identify the correct answer by its text.`;
+
+  // Prompt for generation with Google Search grounding, explicitly asking for JSON
+  const groundedPrompt = `You are an expert quiz generator.
+Create a quiz about the topic: "${topic}" at a ${difficulty} difficulty level.
+The quiz should consist of 5 multiple-choice questions.
+Each question must have exactly 4 unique answer options.
+For each question, clearly identify the correct answer by its text.
+Respond ONLY with a valid JSON array of question objects and nothing else. Do not include markdown fences like \`\`\`json.`;
+
+  // Base configuration
+  const config: any = {
+    temperature: 0.3,
+  };
+
+  // Conditionally add grounding or response schema
+  if (useGrounding) {
+    config.tools = [{googleSearch: {}}];
+  } else {
+    config.responseMimeType = "application/json";
+    config.responseSchema = {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          question: {
+            type: Type.STRING,
+            description: "The full text of the question.",
+          },
+          options: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.STRING,
+            },
+            description: "An array of exactly 4 unique answer options.",
+          },
+          correctAnswer: {
+            type: Type.STRING,
+            description: "The text of the correct option, which must be one of the strings in the 'options' array.",
+          },
+        },
+      },
+    };
+  }
+
 
   let jsonStringToParse = ""; 
 
   try {
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: MODEL_NAME,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        temperature: 0.3, // Lowered temperature for more deterministic JSON output
-        // FIX: Added responseSchema to enforce the structure of the JSON output, making it more reliable.
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              question: {
-                type: Type.STRING,
-                description: "The full text of the question.",
-              },
-              options: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.STRING,
-                },
-                description: "An array of exactly 4 unique answer options.",
-              },
-              correctAnswer: {
-                type: Type.STRING,
-                description: "The text of the correct option, which must be one of the strings in the 'options' array.",
-              },
-            },
-          },
-        },
-      },
+      contents: useGrounding ? groundedPrompt : standardPrompt,
+      config,
     });
 
     if (typeof response.text !== 'string') {
@@ -65,8 +85,13 @@ For each question, clearly identify the correct answer by its text.`;
 
     jsonStringToParse = response.text.trim();
     
-    // FIX: Removed unnecessary markdown fence parsing logic as responseSchema ensures direct JSON output.
+    // If using grounding, the response might contain markdown fences, which we need to remove.
+    if (useGrounding) {
+      jsonStringToParse = jsonStringToParse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    }
+    
     const parsedData = JSON.parse(jsonStringToParse);
+    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? null;
 
     if (!Array.isArray(parsedData)) {
       console.error("Parsed data is not an array:", parsedData);
@@ -100,7 +125,7 @@ For each question, clearly identify the correct answer by its text.`;
         console.warn(`Generated quiz has only ${validatedQuestions.length} questions.`);
     }
 
-    return validatedQuestions;
+    return { questions: validatedQuestions, sources };
 
   } catch (error) {
     console.error("Error generating quiz from Gemini API:", error);

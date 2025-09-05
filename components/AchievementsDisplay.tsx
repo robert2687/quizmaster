@@ -6,12 +6,12 @@ import TrophyIcon from './icons/TrophyIcon';
 
 interface AchievementsDisplayProps {
   onBack: () => void;
-  playerName: string | null;
+  playerIdentifier: string | null; // Use a stable identifier like email
 }
 
-const AchievementsDisplay: React.FC<AchievementsDisplayProps> = ({ onBack, playerName }) => {
+const AchievementsDisplay: React.FC<AchievementsDisplayProps> = ({ onBack, playerIdentifier }) => {
   const { t } = useTranslation();
-  const unlockedIds = playerName ? getUnlockedAchievementIds(playerName) : new Set<string>();
+  const unlockedIds = playerIdentifier ? getUnlockedAchievementIds(playerIdentifier) : new Set<string>();
 
   return (
     <div className="w-full max-w-2xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">

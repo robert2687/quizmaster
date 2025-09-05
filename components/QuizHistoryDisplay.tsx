@@ -5,29 +5,30 @@ import Button from './Button';
 
 interface QuizHistoryDisplayProps {
   onBack: () => void;
-  playerName: string | null;
+  playerIdentifier: string | null; // Use a stable identifier like email
 }
 
 const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
 
-const QuizHistoryDisplay: React.FC<QuizHistoryDisplayProps> = ({ onBack, playerName }) => {
+const QuizHistoryDisplay: React.FC<QuizHistoryDisplayProps> = ({ onBack, playerIdentifier }) => {
   const { t, i18n } = useTranslation();
   const [history, setHistory] = useState<QuizHistoryEntry[]>([]);
 
   useEffect(() => {
-    if (!playerName) return;
-    const historyKey = `${HISTORY_KEY_PREFIX}${playerName}`;
+    if (!playerIdentifier) return;
+    const historyKey = `${HISTORY_KEY_PREFIX}${playerIdentifier}`;
     const storedHistory = localStorage.getItem(historyKey);
     if (storedHistory) {
       try {
         const parsedHistory = JSON.parse(storedHistory) as QuizHistoryEntry[];
         setHistory(parsedHistory);
+      // FIX: Added curly braces to the catch block to correct the syntax error.
       } catch (error) {
         console.error("Failed to parse history from localStorage", error);
         setHistory([]);
       }
     }
-  }, [playerName]);
+  }, [playerIdentifier]);
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString(i18n.language, {
@@ -58,7 +59,7 @@ const QuizHistoryDisplay: React.FC<QuizHistoryDisplayProps> = ({ onBack, playerN
             <tbody>
               {history.map((entry) => (
                 <tr key={entry.id} className="border-b border-slate-700 hover:bg-slate-700/50">
-                  <td className="px-4 py-3 font-semibold text-slate-100 break-all">{entry.topic}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-100 break-words">{entry.topic}</td>
                   <td className="px-4 py-3 text-center font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">
                     {entry.points}
                   </td>

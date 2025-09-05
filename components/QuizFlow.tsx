@@ -44,6 +44,18 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentQuestion = answeredQuestions[currentIndex];
+  
+  // Refs to hold the latest state values to avoid recreating handleNextStep on every tick.
+  const timeLeftRef = useRef(timeLeft);
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  const totalPointsRef = useRef(totalPoints);
+  useEffect(() => {
+    totalPointsRef.current = totalPoints;
+  }, [totalPoints]);
+
 
   const handleNextStep = useCallback((answer?: string) => {
     if (timerRef.current) {
@@ -57,7 +69,7 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
     playSound(isCorrect ? 'correct' : 'incorrect', isSoundEnabled);
 
     const pointsThisTurn = isCorrect
-      ? (difficulty === Difficulty.EASY ? 10 : difficulty === Difficulty.MEDIUM ? 20 : 30) + timeLeft
+      ? (difficulty === Difficulty.EASY ? 10 : difficulty === Difficulty.MEDIUM ? 20 : 30) + timeLeftRef.current
       : 0;
 
     if (isCorrect) {
@@ -76,11 +88,14 @@ const QuizFlow: React.FC<QuizFlowProps> = ({ questions, onQuizComplete, quizTopi
             setIsSubmitting(false);
         } else {
             playSound('complete', isSoundEnabled);
-            // Use totalPoints (from before this question) + pointsThisTurn to get final score
-            onQuizComplete(totalPoints + pointsThisTurn, newAnsweredQuestions);
+            // The score for this turn has been queued for update.
+            // We use the ref for the score from previous questions and add the current turn's points
+            // to ensure the final score passed to the parent is correct.
+            const finalScore = totalPointsRef.current + pointsThisTurn;
+            onQuizComplete(finalScore, newAnsweredQuestions);
         }
     }, 1200);
-  }, [answeredQuestions, currentIndex, currentQuestion, totalPoints, onQuizComplete, questions.length, difficulty, timeLeft, isSoundEnabled]);
+  }, [answeredQuestions, currentIndex, currentQuestion, difficulty, isSoundEnabled, onQuizComplete, questions.length]);
 
   // Effect to manage the timer lifecycle
   useEffect(() => {

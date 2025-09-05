@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuizQuestion } from '../types';
+import { QuizQuestion, GroundingChunk } from '../types';
 import RetryIcon from './icons/RetryIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import XCircleIcon from './icons/XCircleIcon';
@@ -14,9 +14,10 @@ interface ResultsDisplayProps {
   quizTopic: string;
   isSubmittingScore: boolean;
   xpGained: number;
+  sources: GroundingChunk[] | null;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRestart, quizTopic, isSubmittingScore, xpGained }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRestart, quizTopic, isSubmittingScore, xpGained, sources }) => {
   const { t } = useTranslation();
   const totalQuestions = questions.length;
   const correctAnswers = questions.filter(q => q.userAnswer === q.correctAnswer).length;
@@ -81,7 +82,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
 
       <div className="mb-8">
         <h3 className="text-xl font-semibold text-slate-100 mb-4">{t('reviewAnswersTitle')}</h3>
-        <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+        <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
           {questions.map((q, index) => (
             <div key={q.id} className="p-4 bg-slate-700 rounded-lg shadow">
               <p className="font-semibold text-slate-200 mb-1">
@@ -102,6 +103,29 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
         </div>
       </div>
       
+      {sources && sources.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold text-slate-100 mb-4">{t('sourcesTitle')}</h3>
+          <ul className="space-y-2 list-disc list-inside text-slate-300 max-h-40 overflow-y-auto pr-2">
+            {sources.map((source, index) => (
+              // FIX: Added check for source.web and source.web.uri since they are now optional.
+              source.web && source.web.uri && (
+                <li key={index}>
+                  <a
+                    href={source.web.uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-400 hover:text-sky-300 underline transition-colors break-all"
+                  >
+                    {source.web.title || source.web.uri}
+                  </a>
+                </li>
+              )
+            ))}
+          </ul>
+        </div>
+      )}
+
       {isSubmittingScore && (
         <div className="text-center text-slate-400 my-4 animate-pulse">
           <p>{t('submittingScore')}</p>
