@@ -7,7 +7,7 @@ import { getDailyChallengeTopic, getChallengeStatus, completeDailyChallenge, CHA
 import { getPlayerStats, addXp } from './services/playerStatsService';
 import { checkAndUnlockAchievements } from './services/achievementsService';
 import * as authService from './services/authService';
-import { supabase } from './services/supabaseClient';
+import { supabase, isSupabaseConfigured } from './services/supabaseClient';
 import Header from './components/Header';
 import TopicForm from './components/TopicForm';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -83,9 +83,28 @@ const App: React.FC = () => {
   const dismissToast = (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
+  
+  // This effect manages the sound setting persistence.
+  useEffect(() => {
+    localStorage.setItem(SOUND_ENABLED_KEY, String(isSoundEnabled));
+  }, [isSoundEnabled]);
 
+  // This effect sets up the daily challenge topic once on mount.
   useEffect(() => {
     setDailyChallengeTopic(getDailyChallengeTopic());
+  }, []);
+
+  // This effect handles all authentication logic, including setup and state changes.
+  // It runs only once when the component mounts.
+  useEffect(() => {
+    // If Supabase is not configured, we cannot perform any online actions.
+    // The UI will default to the login/signup screen. Any attempt to use
+    // auth features will be caught by the authService, which will
+    // throw a user-friendly error, preventing network calls.
+    if (!isSupabaseConfigured) {
+      setQuizState(QuizState.AUTH);
+      return; // Stop execution of this effect.
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (_event === 'PASSWORD_RECOVERY') {
@@ -122,9 +141,12 @@ const App: React.FC = () => {
         setCurrentUser(null);
         setPlayerStats(null);
         setChallengeStatus(null);
-        if(quizState !== QuizState.PASSWORD_RESET) {
-          setQuizState(QuizState.AUTH);
-        }
+        setQuizState((currentQuizState) => {
+            if (currentQuizState !== QuizState.PASSWORD_RESET) {
+                return QuizState.AUTH;
+            }
+            return currentQuizState;
+        });
       }
     });
 
@@ -140,11 +162,7 @@ const App: React.FC = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [quizState]); 
-
-  useEffect(() => {
-    localStorage.setItem(SOUND_ENABLED_KEY, String(isSoundEnabled));
-  }, [isSoundEnabled]);
+  }, []);
 
   const handleToggleSound = () => {
     setIsSoundEnabled(prev => !prev);

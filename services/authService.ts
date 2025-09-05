@@ -1,7 +1,16 @@
 import { User } from '../types';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+
+const onlineFeaturesUnavailableError = "Online features are not configured. Please contact the administrator.";
+
+const checkSupabaseConfigOrThrow = () => {
+  if (!isSupabaseConfigured) {
+    throw new Error(onlineFeaturesUnavailableError);
+  }
+};
 
 export const signUp = async (playerName: string, email: string, password: string): Promise<User> => {
+  checkSupabaseConfigOrThrow();
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -45,6 +54,7 @@ export const signUp = async (playerName: string, email: string, password: string
 };
 
 export const login = async (email: string, password: string): Promise<User> => {
+    checkSupabaseConfigOrThrow();
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -65,6 +75,7 @@ export const login = async (email: string, password: string): Promise<User> => {
 };
 
 export const logout = async () => {
+  if (!isSupabaseConfigured) return;
   const { error } = await supabase.auth.signOut();
   if (error) {
     console.error("Error logging out:", error);
@@ -72,6 +83,7 @@ export const logout = async () => {
 };
 
 export const getUserProfile = async (userId: string): Promise<User | null> => {
+    if (!isSupabaseConfigured) return null;
     const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -96,6 +108,7 @@ export const getUserProfile = async (userId: string): Promise<User | null> => {
 
 
 export const updateUserProfile = async (userId: string, updates: Partial<Pick<User, 'playerName' | 'avatar' | 'bio' | 'occupation'>>): Promise<User> => {
+    checkSupabaseConfigOrThrow();
     // Map application camelCase to database snake_case
     const dbUpdates = {
         player_name: updates.playerName,
@@ -130,6 +143,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<Pick<Us
 };
 
 export const sendPasswordResetEmail = async (email: string) => {
+  checkSupabaseConfigOrThrow();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin,
   });
@@ -139,6 +153,7 @@ export const sendPasswordResetEmail = async (email: string) => {
 };
 
 export const updateUserPassword = async (newPassword: string) => {
+  checkSupabaseConfigOrThrow();
   const { data, error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) {
     throw error;

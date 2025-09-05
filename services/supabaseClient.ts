@@ -6,6 +6,8 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+
 let effectiveSupabaseUrl = supabaseUrl;
 let effectiveSupabaseAnonKey = supabaseAnonKey;
 
@@ -13,11 +15,10 @@ let effectiveSupabaseAnonKey = supabaseAnonKey;
 // (e.g., in a sandboxed environment), this check provides non-functional placeholders.
 // This allows the app UI to load, although online features will fail gracefully
 // with error messages instead of causing a startup crash.
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!isSupabaseConfigured) {
   console.warn(
     'Supabase environment variables (SUPABASE_URL, SUPABASE_ANON_KEY) are not set. ' +
-    'Using placeholder credentials. Online features like authentication and ' +
-    'leaderboards will not work until properly configured.'
+    'Online features like authentication and leaderboards will not work.'
   );
   effectiveSupabaseUrl = 'https://placeholder.supabase.co';
   effectiveSupabaseAnonKey = 'placeholder.anon.key';

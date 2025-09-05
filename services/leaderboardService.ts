@@ -1,5 +1,5 @@
 import { LeaderboardEntry, LeaderboardFilters } from '../types';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const getSeasonStartDate = (): string => {
     const now = new Date();
@@ -14,6 +14,7 @@ const getSeasonStartDate = (): string => {
  * Retrieves the leaderboard from the Supabase database.
  */
 export const getLeaderboard = async (filters: LeaderboardFilters): Promise<LeaderboardEntry[]> => {
+  if (!isSupabaseConfigured) return [];
   try {
     let query = supabase
         .from('leaderboard')
@@ -58,6 +59,7 @@ export const getLeaderboard = async (filters: LeaderboardFilters): Promise<Leade
  * Only updates if the new score is a personal best for that user on that topic.
  */
 export const postScore = async (newEntry: Omit<LeaderboardEntry, 'id' | 'timestamp'>): Promise<LeaderboardEntry | null> => {
+  if (!isSupabaseConfigured) return null;
   try {
     // Check for an existing score for the same user and topic
     const { data: existing, error: selectError } = await supabase

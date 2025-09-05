@@ -1,5 +1,5 @@
 import { Achievement, QuizHistoryEntry } from '../types';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
 
@@ -21,7 +21,7 @@ export const ALL_ACHIEVEMENTS: Record<string, Achievement> = {
  * Gets the set of unlocked achievement IDs for a player from their Supabase profile.
  */
 export const getUnlockedAchievementIds = async (userId: string): Promise<Set<string>> => {
-  if (!userId) return new Set();
+  if (!isSupabaseConfigured || !userId) return new Set();
   
   const { data, error } = await supabase
     .from('profiles')
@@ -41,6 +41,7 @@ export const getUnlockedAchievementIds = async (userId: string): Promise<Set<str
  * Saves the array of unlocked achievement IDs for a player to their Supabase profile.
  */
 const saveUnlockedAchievements = async (userId: string, unlockedIds: Set<string>) => {
+  if (!isSupabaseConfigured) return;
   const achievementsArray = Array.from(unlockedIds);
   const { error } = await supabase
     .from('profiles')

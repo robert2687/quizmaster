@@ -1,5 +1,5 @@
 import { PlayerStats } from '../types';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const BASE_XP = 500;
 const LEVEL_SCALING_FACTOR = 1.2;
@@ -20,10 +20,10 @@ const calculateLevelFromXp = (xp: number): number => {
 };
 
 /**
- * Gets player stats from Supabase, or returns default stats if not found.
+ * Gets player stats from Supabase, or returns default stats if not found or if Supabase is not configured.
  */
 export const getPlayerStats = async (userId: string): Promise<PlayerStats> => {
-  if (!userId) return { xp: 0, level: 1 };
+  if (!isSupabaseConfigured || !userId) return { xp: 0, level: 1 };
   
   const { data, error } = await supabase
     .from('profiles')
@@ -46,9 +46,10 @@ interface AddXpResult {
 
 /**
  * Adds XP to a player's stats in Supabase, checks for level ups, and saves the new stats.
+ * Does nothing if Supabase is not configured.
  */
 export const addXp = async (userId: string, amount: number): Promise<AddXpResult> => {
-  if (!userId) {
+  if (!isSupabaseConfigured || !userId) {
     return { newStats: { xp: 0, level: 1 }, leveledUp: false, xpGained: 0 };
   }
   
