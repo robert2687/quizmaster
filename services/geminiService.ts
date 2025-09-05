@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Type, GroundingChunk } from "@google/genai";
 import { QuizQuestion } from '../types';
 
@@ -11,13 +10,8 @@ export const generateQuizFromTopic = async (
   useGrounding: boolean,
   occupation?: string,
 ): Promise<{ questions: QuizQuestion[]; sources: GroundingChunk[] | null }> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    console.error("API key not found. Please set the API_KEY environment variable.");
-    throw new Error("API key not configured. Cannot generate quiz.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // FIX: Removed manual API key check. Assuming key is provided by the environment as per guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const personalizationInstruction = occupation && occupation !== 'None'
     ? ` The user's occupation is ${occupation}, so tailor the questions to be relevant to someone with that background.`
@@ -90,9 +84,12 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
 
     jsonStringToParse = response.text.trim();
     
-    // If using grounding, the response might contain markdown fences, which we need to remove.
-    if (useGrounding) {
-      jsonStringToParse = jsonStringToParse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    // FIX: More robust JSON extraction. The model can sometimes return the JSON
+    // wrapped in markdown or with extra text. This regex looks for the first
+    // occurrence of a valid JSON array or object in the response.
+    const jsonMatch = jsonStringToParse.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+    if (jsonMatch && jsonMatch[0]) {
+        jsonStringToParse = jsonMatch[0];
     }
     
     const parsedData = JSON.parse(jsonStringToParse);
@@ -114,29 +111,40 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
     }
 
     const validatedQuestions: QuizQuestion[] = questionsArray.map((item: any, index: number) => {
-        // Basic validation for presence and type of keys
+        // FIX: More flexible validation to handle common variations in property names from the AI.
+        const itemQuestion = item.question || item.q;
+        const itemOptions = item.options || item.choices;
+        const itemCorrectAnswer = item.correctAnswer || item.answer;
+        
         if (
-            typeof item.question !== 'string' ||
-            !Array.isArray(item.options) ||
-            typeof item.correctAnswer !== 'string'
+            typeof itemQuestion !== 'string' ||
+            !Array.isArray(itemOptions) ||
+            typeof itemCorrectAnswer !== 'string'
         ) {
             console.error(`Invalid question structure (missing or wrong type for keys) at index ${index}:`, item);
             throw new Error(`Invalid data format for question ${index + 1}. Required fields (question, options, correctAnswer) are missing or have the wrong type.`);
         }
 
         // Sanitize and validate content
-        const questionText = item.question.trim();
-        const options = item.options
-            .map((opt: any) => (typeof opt === 'string' ? opt.trim() : ''))
+        const questionText = itemQuestion.trim();
+        // FIX: More robust option parsing, handling objects with a 'text' property.
+        const options = itemOptions
+            .map((opt: any) => {
+                if (typeof opt === 'string') return opt.trim();
+                // If it's an object with a 'text' or 'value' property, use that.
+                if (typeof opt === 'object' && opt !== null && (typeof opt.text === 'string' || typeof opt.value === 'string')) {
+                    return (opt.text || opt.value).trim();
+                }
+                return ''; // Not a valid option format
+            })
             .filter(opt => opt); // Remove empty options
 
-        let correctAnswerText = item.correctAnswer.trim();
+        let correctAnswerText = itemCorrectAnswer.trim();
 
         // Check for content validity after trimming
         if (
             !questionText ||
             options.length !== 4 || // Check for exactly 4 non-empty options
-            !options.every((opt: string) => opt) || // Redundant check, but safe
             !correctAnswerText
         ) {
             console.error(`Invalid question content (empty fields or wrong option count) at index ${index}:`, {
@@ -184,6 +192,7 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
     console.error("Error generating quiz from Gemini API:", error);
     if (error instanceof SyntaxError) { 
       console.error("Failed to parse JSON response. The problematic string that was attempted to be parsed was:\n---\n" + jsonStringToParse + "\n---");
+      throw new Error("The AI returned quiz data in a format that could not be understood.");
     }
     
     if (error instanceof Error) {
