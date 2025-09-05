@@ -98,30 +98,78 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
     const parsedData = JSON.parse(jsonStringToParse);
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? null;
 
-    if (!Array.isArray(parsedData)) {
-      console.error("Parsed data is not an array:", parsedData);
+    // The model might wrap the array in a root object, e.g., { "questions": [...] }.
+    // This logic attempts to find and extract the first array property from the object.
+    let questionsArray = parsedData;
+    if (questionsArray && typeof questionsArray === 'object' && !Array.isArray(questionsArray)) {
+        const key = Object.keys(questionsArray).find(k => Array.isArray((questionsArray as any)[k]));
+        if (key) {
+            questionsArray = (questionsArray as any)[key];
+        }
+    }
+
+    if (!Array.isArray(questionsArray)) {
+      console.error("Parsed data is not an array:", questionsArray);
       throw new Error("Failed to parse quiz data: Expected an array of questions.");
     }
 
-    const validatedQuestions: QuizQuestion[] = parsedData.map((item: any, index: number) => {
-      if (
-        typeof item.question !== 'string' || !item.question.trim() ||
-        !Array.isArray(item.options) ||
-        item.options.length !== 4 ||
-        !item.options.every((opt: any) => typeof opt === 'string' && opt.trim()) ||
-        typeof item.correctAnswer !== 'string' || !item.correctAnswer.trim() ||
-        !item.options.includes(item.correctAnswer)
-      ) {
-        console.error(`Invalid question structure at index ${index}:`, item);
-        throw new Error(`Invalid data format for question ${index + 1}. Please ensure all fields are correctly populated and the correct answer is one of the options.`);
-      }
-      return {
-        id: crypto.randomUUID(),
-        question: item.question,
-        options: item.options,
-        correctAnswer: item.correctAnswer,
-      };
+    const validatedQuestions: QuizQuestion[] = questionsArray.map((item: any, index: number) => {
+        // Basic validation for presence and type of keys
+        if (
+            typeof item.question !== 'string' ||
+            !Array.isArray(item.options) ||
+            typeof item.correctAnswer !== 'string'
+        ) {
+            console.error(`Invalid question structure (missing or wrong type for keys) at index ${index}:`, item);
+            throw new Error(`Invalid data format for question ${index + 1}. Required fields (question, options, correctAnswer) are missing or have the wrong type.`);
+        }
+
+        // Sanitize and validate content
+        const questionText = item.question.trim();
+        const options = item.options
+            .map((opt: any) => (typeof opt === 'string' ? opt.trim() : ''))
+            .filter(opt => opt); // Remove empty options
+
+        let correctAnswerText = item.correctAnswer.trim();
+
+        // Check for content validity after trimming
+        if (
+            !questionText ||
+            options.length !== 4 || // Check for exactly 4 non-empty options
+            !options.every((opt: string) => opt) || // Redundant check, but safe
+            !correctAnswerText
+        ) {
+            console.error(`Invalid question content (empty fields or wrong option count) at index ${index}:`, {
+                question: questionText,
+                options,
+                correctAnswer: correctAnswerText
+            });
+            throw new Error(`Invalid data format for question ${index + 1}. Fields must not be empty and there must be exactly 4 options.`);
+        }
+
+        // Find the correct answer in the options, allowing for minor inconsistencies like casing.
+        let foundCorrectAnswerInOptions = options.find(opt => opt === correctAnswerText);
+        
+        if (!foundCorrectAnswerInOptions) {
+            // If an exact match isn't found, try a case-insensitive match.
+            const lowerCaseCorrectAnswer = correctAnswerText.toLowerCase();
+            foundCorrectAnswerInOptions = options.find(opt => opt.toLowerCase() === lowerCaseCorrectAnswer);
+        }
+
+        if (!foundCorrectAnswerInOptions) {
+            console.error(`Correct answer "${correctAnswerText}" not found in options [${options.join(", ")}] for question ${index + 1}:`, item);
+            throw new Error(`Invalid data format for question ${index + 1}. The provided correct answer does not match any of the options.`);
+        }
+
+        return {
+            id: crypto.randomUUID(),
+            question: questionText,
+            options: options,
+            // Use the version from the options array to ensure casing is consistent.
+            correctAnswer: foundCorrectAnswerInOptions,
+        };
     });
+
 
     if (validatedQuestions.length === 0) {
         throw new Error("The generated quiz has no questions. Please try a different topic or refine your request.");

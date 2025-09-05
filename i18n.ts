@@ -1,4 +1,3 @@
-
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
@@ -55,6 +54,11 @@ const resources = {
       difficultyHard: "Hard",
       useGroundingLabel: "Use Google Search for up-to-date topics",
       useGroundingTooltip: "Best for recent events. May take longer.",
+      // Daily Challenge
+      dailyChallengeTitle: "Daily Challenge",
+      playChallengeButton: "Play Challenge",
+      viewChallengeLeaderboardButton: "View Leaderboard",
+      dailyChallengeLeaderboardTitle: "Daily Challenge Leaderboard",
       // LoadingSpinner
       loadingMessageDefault: "Generating your quiz...",
       loadingMessageTopic: "Generating your quiz on \"{{topic}}\"...",
@@ -105,7 +109,7 @@ const resources = {
       leaderboardPoints: "Points",
       leaderboardDate: "Date",
       leaderboardNoScores: "No scores recorded yet. Play a quiz to see your name here!",
-      backToQuizButton: "Back to Quiz",
+      backToQuizButton: "Back to Menu",
       leaderboardLoading: "Fetching top scores...",
       leaderboardError: "Could not load the leaderboard. Please try again later.",
       leaderboardThisWeek: "This Week",
@@ -185,6 +189,11 @@ const resources = {
       difficultyHard: "Ťažká",
       useGroundingLabel: "Použiť Google Vyhľadávanie pre aktuálne témy",
       useGroundingTooltip: "Najlepšie pre nedávne udalosti. Môže trvať dlhšie.",
+      // Daily Challenge
+      dailyChallengeTitle: "Denná Výzva",
+      playChallengeButton: "Hrať Výzvu",
+      viewChallengeLeaderboardButton: "Zobraziť Rebríček",
+      dailyChallengeLeaderboardTitle: "Rebríček Dennej Výzvy",
       // LoadingSpinner
       loadingMessageDefault: "Generujem váš kvíz...",
       loadingMessageTopic: "Generujem váš kvíz na tému \"{{topic}}\"...",
@@ -236,7 +245,7 @@ const resources = {
       leaderboardPoints: "Body",
       leaderboardDate: "Dátum",
       leaderboardNoScores: "Zatiaľ žiadne zaznamenané skóre. Zahrajte si kvíz a zapíšte sa!",
-      backToQuizButton: "Späť na Kvíz",
+      backToQuizButton: "Späť do Menu",
       leaderboardLoading: "Načítavam najlepšie skóre...",
       leaderboardError: "Nepodarilo sa načítať rebríček. Skúste to prosím neskôr.",
       leaderboardThisWeek: "Tento týždeň",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LeaderboardEntry, LeaderboardFilters } from '../types';
 import { getLeaderboard } from '../services/leaderboardService';
@@ -11,21 +11,46 @@ import MedalIcon from './icons/MedalIcon';
 interface LeaderboardDisplayProps {
   onBack: () => void;
   userEmail: string | null;
+  title: string;
+  topicFilter?: string;
 }
 
-const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEmail }) => {
+interface DisplayEntry extends LeaderboardEntry {
+  isNew?: boolean;
+}
+
+const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEmail, title, topicFilter }) => {
   const { t, i18n } = useTranslation();
-  const [fullLeaderboard, setFullLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<DisplayEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<LeaderboardFilters>({ season: 'weekly', topic: '' });
+  const [filters, setFilters] = useState<LeaderboardFilters>({ 
+      season: 'weekly', 
+      topic: topicFilter || '' 
+  });
+  
+  // Ref to track IDs of entries from the previous fetch to identify new ones.
+  const previousEntryIds = useRef(new Set<string>());
 
   const fetchLeaderboard = useCallback(async () => {
-    setIsLoading(true);
+    // Don't show loading spinner on subsequent polls, only on initial load or filter change
+    if (!previousEntryIds.current.size) {
+        setIsLoading(true);
+    }
     setError(null);
     try {
       const data = await getLeaderboard(filters);
-      setFullLeaderboard(data);
+      const currentIds = new Set(data.map(e => e.id));
+      
+      const newDisplayedEntries: DisplayEntry[] = data.map(entry => ({
+          ...entry,
+          // Mark as new if it wasn't in the previous set, but not on the very first load.
+          isNew: !previousEntryIds.current.has(entry.id) && previousEntryIds.current.size > 0
+      }));
+
+      setLeaderboard(newDisplayedEntries);
+      previousEntryIds.current = currentIds;
+
     } catch (err) {
       setError(t('leaderboardError'));
       console.error("Failed to fetch leaderboard", err);
@@ -34,9 +59,22 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
     }
   }, [t, filters]);
 
+  // Initial fetch and filter-based refetch
   useEffect(() => {
+    previousEntryIds.current.clear(); // Reset on filter change to allow initial load state
     fetchLeaderboard();
   }, [fetchLeaderboard]);
+  
+  // Polling for live updates
+  useEffect(() => {
+    const pollInterval = Math.random() * 3000 + 4000; // Poll every 4-7 seconds
+    const intervalId = setInterval(() => {
+      fetchLeaderboard();
+    }, pollInterval);
+    
+    return () => clearInterval(intervalId);
+  }, [fetchLeaderboard]);
+
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString(i18n.language, {
@@ -48,19 +86,20 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
     setFilters(prev => ({ ...prev, ...newFilters }));
   }
   
-  const renderLeaderboardRows = (entries: LeaderboardEntry[], rankOffset: number = 0) => {
+  const renderLeaderboardRows = (entries: DisplayEntry[], rankOffset: number = 0) => {
     return entries.map((entry, index) => {
         const rank = rankOffset + index + 1;
         const isCurrentUser = userEmail && entry.userEmail === userEmail;
+        
+        let rowClasses = 'border-b border-slate-700 transition-all duration-200';
+        if (entry.isNew && !isCurrentUser) rowClasses += ' animate-highlight-fade';
+        if (isCurrentUser) rowClasses += ' bg-purple-900/60 border-l-4 border-purple-500 scale-[1.01] shadow-lg';
+        else rowClasses += ' hover:bg-slate-700/50';
+
         return (
             <tr 
                 key={entry.id} 
-                className={`border-b border-slate-700 transition-all duration-200 animate-fade-in ${
-                  isCurrentUser 
-                    ? 'bg-purple-900/60 border-l-4 border-purple-500 scale-[1.01] shadow-lg' 
-                    : 'hover:bg-slate-700/50'
-                }`}
-                style={{ animationDelay: `${index * 50}ms` }}
+                className={rowClasses}
             >
                 <td className="px-4 py-3 text-center font-bold text-slate-100">
                     <div className="flex items-center justify-center space-x-2">
@@ -97,7 +136,7 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
        return <ErrorDisplay message={error} onRetry={fetchLeaderboard} />;
     }
     
-    if (fullLeaderboard.length === 0) {
+    if (leaderboard.length === 0) {
         return (
             <div className="min-h-[300px] flex items-center justify-center">
                 <p className="text-center text-slate-400 text-lg py-8">{t('leaderboardNoScores')}</p>
@@ -105,12 +144,13 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
         );
     }
 
+    const fullLeaderboard = leaderboard;
     const top10 = fullLeaderboard.slice(0, 10);
     const playerIndex = userEmail ? fullLeaderboard.findIndex(e => e.userEmail === userEmail) : -1;
     const isPlayerInTop10 = playerIndex !== -1 && playerIndex < 10;
     const shouldShowPlayerRank = playerIndex !== -1 && !isPlayerInTop10;
 
-    let playerAndNeighbors: LeaderboardEntry[] = [];
+    let playerAndNeighbors: DisplayEntry[] = [];
     if (shouldShowPlayerRank) {
         const startIndex = Math.max(0, playerIndex - 1);
         const endIndex = Math.min(fullLeaderboard.length, playerIndex + 2);
@@ -148,7 +188,7 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
   return (
     <div className="w-full max-w-4xl p-6 md:p-8 bg-slate-800 shadow-2xl rounded-xl">
       <h2 className="text-3xl md:text-4xl font-extrabold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
-        {t('leaderboardTitle')}
+        {title}
       </h2>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 bg-slate-900/50 rounded-lg">
@@ -171,8 +211,9 @@ const LeaderboardDisplay: React.FC<LeaderboardDisplayProps> = ({ onBack, userEma
             onChange={(e) => handleFilterChange({ topic: e.target.value })}
             placeholder={t('leaderboardFilterByTopic')}
             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-colors"
+            disabled={!!topicFilter} // Disable topic filter when viewing a specific challenge
           />
-          {filters.topic && (
+          {filters.topic && !topicFilter && (
             <button
               onClick={() => handleFilterChange({ topic: '' })}
               className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-white"
