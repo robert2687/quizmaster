@@ -119,7 +119,7 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
         if (
             typeof itemQuestion !== 'string' ||
             !Array.isArray(itemOptions) ||
-            typeof itemCorrectAnswer !== 'string'
+            (typeof itemCorrectAnswer !== 'string' && typeof itemCorrectAnswer !== 'number')
         ) {
             console.error(`Invalid question structure (missing or wrong type for keys) at index ${index}:`, item);
             throw new Error(`Invalid data format for question ${index + 1}. Required fields (question, options, correctAnswer) are missing or have the wrong type.`);
@@ -139,7 +139,19 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
             })
             .filter(opt => opt); // Remove empty options
 
-        let correctAnswerText = itemCorrectAnswer.trim();
+        let correctAnswerText: string;
+        
+        // Handle cases where the AI returns the index of the correct answer instead of the string.
+        if (typeof itemCorrectAnswer === 'number') {
+            if (itemCorrectAnswer >= 0 && itemCorrectAnswer < options.length) {
+                correctAnswerText = options[itemCorrectAnswer];
+            } else {
+                console.error(`Correct answer index ${itemCorrectAnswer} is out of bounds for options at index ${index}:`, { options, item });
+                throw new Error(`Invalid data for question ${index + 1}: Correct answer index is out of range.`);
+            }
+        } else {
+            correctAnswerText = itemCorrectAnswer.trim();
+        }
 
         // Check for content validity after trimming
         if (

@@ -1,3 +1,5 @@
+
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, User, GroundingChunk } from './types';
@@ -159,4 +161,206 @@ const App: React.FC = () => {
     }
   }, [currentUser]);
 
-  const saveQuizToHistory = useCallback((currentTopic: string
+  const saveQuizToHistory = useCallback((currentTopic: string, totalPoints: number, answeredQuestions: QuizQuestion[], currentDifficulty: Difficulty) => {
+    if (!currentUser) return;
+    const historyKey = `${HISTORY_KEY_PREFIX}${currentUser.email}`;
+    const newEntry: QuizHistoryEntry = {
+      id: crypto.randomUUID(),
+      topic: currentTopic,
+      points: totalPoints,
+      timestamp: Date.now(),
+      difficulty: currentDifficulty,
+      correctAnswers: answeredQuestions.filter(q => q.userAnswer === q.correctAnswer).length,
+      totalQuestions: answeredQuestions.length,
+    };
+
+    const storedHistory = localStorage.getItem(historyKey);
+    let history: QuizHistoryEntry[] = [];
+    if (storedHistory) {
+      try {
+        history = JSON.parse(storedHistory);
+      } catch (e) {
+        console.error("Could not parse quiz history", e);
+      }
+    }
+    history.unshift(newEntry); // Add to the beginning
+    localStorage.setItem(historyKey, JSON.stringify(history.slice(0, 50))); // Keep last 50
+  }, [currentUser]);
+
+  const handleQuizComplete = useCallback((totalPoints: number, answeredQuestions: QuizQuestion[]) => {
+    if (!currentUser) return;
+    
+    setPoints(totalPoints);
+    setQuestions(answeredQuestions);
+    setQuizState(QuizState.COMPLETED);
+
+    const correctAnswers = answeredQuestions.filter(q => q.userAnswer === q.correctAnswer).length;
+    const totalQuestions = answeredQuestions.length;
+    const xpFromPoints = totalPoints;
+    const completionBonus = 50;
+    const perfectionBonus = correctAnswers === totalQuestions ? 200 : 0;
+    const totalXp = xpFromPoints + completionBonus + perfectionBonus;
+    
+    const { newStats, leveledUp, xpGained } = addXp(currentUser.email, totalXp);
+    setLastXpGained(xpGained);
+    setPlayerStats(newStats);
+
+    if (leveledUp) {
+      addToast(t('levelUpMessage', { level: newStats.level }), 'success', <TrophyIcon className="w-5 h-5" />);
+    }
+
+    const newAchievements = checkAndUnlockAchievements({
+      email: currentUser.email,
+      correctAnswers,
+      totalQuestions,
+    });
+
+    newAchievements.forEach(ach => {
+      addToast(t('achievementUnlockedTitle'), 'success', <TrophyIcon className="w-5 h-5" />);
+      addToast(t(ach.nameKey), 'info');
+    });
+
+    submitScoreToLeaderboard(topic, totalPoints);
+    saveQuizToHistory(topic, totalPoints, answeredQuestions, difficulty);
+  }, [currentUser, submitScoreToLeaderboard, saveQuizToHistory, topic, difficulty, addToast, t]);
+
+  const handleRestart = () => {
+    setQuizState(QuizState.IDLE);
+    setQuestions([]);
+    setTopic('');
+    setError(null);
+  };
+
+  const handleProfileUpdate = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    addToast(t('profileUpdatedSuccess'), 'success');
+    setQuizState(QuizState.IDLE);
+  };
+
+  const handleProfileSetupComplete = (occupation: string) => {
+    if (!currentUser) return;
+    authService.updateUserProfile(currentUser.email, { occupation })
+      .then(updatedUser => {
+        setCurrentUser(updatedUser);
+        setQuizState(QuizState.IDLE);
+      })
+      .catch(console.error);
+  };
+
+  const renderContent = () => {
+    switch (quizState) {
+      case QuizState.AUTH:
+        return <AuthFlow onAuthSuccess={handleAuthSuccess} />;
+      case QuizState.PROFILE_SETUP:
+        return currentUser && <OccupationSelector onSelect={handleProfileSetupComplete} onSkip={() => setQuizState(QuizState.IDLE)} />;
+      case QuizState.EDIT_PROFILE:
+        return currentUser && <ProfileEditor currentUser={currentUser} onProfileUpdate={handleProfileUpdate} onCancel={() => setQuizState(QuizState.IDLE)} />;
+      case QuizState.GENERATING:
+        return <LoadingSpinner message={t('loadingMessageTopic', { topic })} />;
+      case QuizState.IN_PROGRESS:
+        return (
+          <QuizFlow
+            questions={questions}
+            onQuizComplete={handleQuizComplete}
+            quizTopic={topic}
+            difficulty={difficulty}
+            isSoundEnabled={isSoundEnabled}
+          />
+        );
+      case QuizState.COMPLETED:
+        return (
+          <ResultsDisplay
+            points={points}
+            questions={questions}
+            onRestart={handleRestart}
+            quizTopic={topic}
+            isSubmittingScore={isSubmittingScore}
+            xpGained={lastXpGained}
+            sources={sources}
+          />
+        );
+      case QuizState.ERROR:
+        return <ErrorDisplay message={error || t('errorUnknownQuizGeneration')} onRetry={handleRestart} />;
+      case QuizState.SHOW_LEADERBOARD:
+        return leaderboardConfig && <LeaderboardDisplay onBack={handleRestart} userEmail={currentUser?.email || null} title={leaderboardConfig.title} topicFilter={leaderboardConfig.topicFilter} />;
+      case QuizState.SHOW_HISTORY:
+        return <QuizHistoryDisplay onBack={handleRestart} playerIdentifier={currentUser?.email || null} />;
+      case QuizState.SHOW_ACHIEVEMENTS:
+        return <AchievementsDisplay onBack={handleRestart} playerIdentifier={currentUser?.email || null} />;
+      case QuizState.IDLE:
+      default:
+        return (
+          <div className="w-full max-w-lg">
+            {/* FIX: The `isGenerating` prop should be false when the quiz state is IDLE. 
+                The previous comparison caused a TypeScript error because it would always be false in this context. */}
+            <TopicForm onGenerateQuiz={handleGenerateQuiz} isGenerating={false} />
+            <div className="mt-6 text-center">
+                <p className="font-bold text-lg text-slate-100 mb-2">{t('dailyChallengeTitle')}: <span className="text-purple-400">{dailyChallengeTopic}</span></p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button onClick={() => handleGenerateQuiz(dailyChallengeTopic, Difficulty.MEDIUM, true)} className="w-full sm:w-auto">
+                        {t('playChallengeButton')}
+                    </Button>
+                    <Button 
+                        onClick={() => {
+                            setLeaderboardConfig({ title: t('dailyChallengeLeaderboardTitle'), topicFilter: dailyChallengeTopic });
+                            setQuizState(QuizState.SHOW_LEADERBOARD);
+                        }} 
+                        variant="secondary" 
+                        className="w-full sm:w-auto"
+                    >
+                        {t('viewChallengeLeaderboardButton')}
+                    </Button>
+                </div>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center p-4 font-sans relative">
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <div className="w-full max-w-5xl mx-auto flex justify-between items-start pt-4 px-2 sm:px-4">
+        <LanguageSwitcher />
+        {currentUser ? (
+          <div className="flex items-center gap-4">
+            <PlayerStatsDisplay stats={playerStats} />
+            <SoundToggle isSoundEnabled={isSoundEnabled} onToggle={handleToggleSound} />
+          </div>
+        ) : <div />}
+      </div>
+      
+      <main className="flex-grow flex flex-col items-center justify-center w-full px-4 text-center">
+        <Header />
+        
+        {currentUser && quizState === QuizState.IDLE && (
+          <div className="mb-8 p-4 bg-slate-800 rounded-lg shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 w-full max-w-3xl">
+            <div className="flex items-center gap-4 text-left">
+              <Avatar avatarId={currentUser.avatar} className="w-12 h-12 rounded-full flex-shrink-0" />
+              <div>
+                <p className="text-sm text-slate-400">{t('playingAs')}</p>
+                <p className="font-bold text-lg text-slate-100">{currentUser.playerName}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <LinkButton onClick={() => setQuizState(QuizState.SHOW_HISTORY)}>{t('viewHistoryButton')}</LinkButton>
+              <LinkButton onClick={() => { setLeaderboardConfig({ title: t('leaderboardTitle') }); setQuizState(QuizState.SHOW_LEADERBOARD); }}>{t('viewLeaderboardButton')}</LinkButton>
+              <LinkButton onClick={() => setQuizState(QuizState.SHOW_ACHIEVEMENTS)}>{t('viewAchievementsButton')}</LinkButton>
+              <LinkButton onClick={() => setQuizState(QuizState.EDIT_PROFILE)}>{t('editProfileButton')}</LinkButton>
+              <LinkButton onClick={handleLogout}>{t('logoutButton')}</LinkButton>
+            </div>
+          </div>
+        )}
+
+        {renderContent()}
+
+      </main>
+
+      <footer className="w-full text-center py-4 text-slate-500 text-xs">
+        <p>&copy; {new Date().getFullYear()} {t('footerRights')}. {t('poweredBy')}</p>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
