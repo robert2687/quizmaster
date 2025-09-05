@@ -128,3 +128,20 @@ export const updateUserProfile = async (userId: string, updates: Partial<Pick<Us
         occupation: data.occupation,
     };
 };
+
+export const sendPasswordResetEmail = async (email: string) => {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+  if (error) {
+    throw error;
+  }
+};
+
+export const updateUserPassword = async (newPassword: string) => {
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    throw error;
+  }
+  return data;
+};

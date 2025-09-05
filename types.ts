@@ -11,6 +11,7 @@ export enum QuizState {
   INITIALIZING = 'initializing',
   AUTH = 'auth', // New state for login/signup
   PROFILE_SETUP = 'profile_setup', // New state for post-signup setup
+  PASSWORD_RESET = 'password_reset',
   IDLE = 'idle',
   GENERATING = 'generating',
   IN_PROGRESS = 'inProgress',

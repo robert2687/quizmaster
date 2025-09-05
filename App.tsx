@@ -30,6 +30,7 @@ import Avatar from './components/Avatar';
 import OccupationSelector from './components/OccupationSelector';
 import DailyChallengeDisplay from './components/DailyChallengeDisplay';
 import FireIcon from './components/icons/FireIcon';
+import PasswordResetForm from './components/PasswordResetForm';
 
 const SOUND_ENABLED_KEY = 'quizMasterSoundEnabled';
 const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
@@ -87,6 +88,11 @@ const App: React.FC = () => {
     setDailyChallengeTopic(getDailyChallengeTopic());
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') {
+        setQuizState(QuizState.PASSWORD_RESET);
+        return; // Stop further processing for this event
+      }
+
       if (session?.user) {
         const userProfile = await authService.getUserProfile(session.user.id);
         if (userProfile) {
@@ -97,7 +103,7 @@ const App: React.FC = () => {
 
           // This is now the single source of truth for state transitions after auth changes.
           setQuizState((currentQuizState) => {
-            const isAuthScreen = currentQuizState === QuizState.AUTH || currentQuizState === QuizState.INITIALIZING;
+            const isAuthScreen = currentQuizState === QuizState.AUTH || currentQuizState === QuizState.INITIALIZING || currentQuizState === QuizState.PASSWORD_RESET;
             if (isAuthScreen) {
               // If user just verified, their occupation won't be set yet. Route them to profile setup.
               return !userProfile.occupation ? QuizState.PROFILE_SETUP : QuizState.IDLE;
@@ -116,7 +122,9 @@ const App: React.FC = () => {
         setCurrentUser(null);
         setPlayerStats(null);
         setChallengeStatus(null);
-        setQuizState(QuizState.AUTH);
+        if(quizState !== QuizState.PASSWORD_RESET) {
+          setQuizState(QuizState.AUTH);
+        }
       }
     });
 
@@ -132,7 +140,7 @@ const App: React.FC = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []); // Empty dependency array ensures this runs only once on mount.
+  }, [quizState]); 
 
   useEffect(() => {
     localStorage.setItem(SOUND_ENABLED_KEY, String(isSoundEnabled));
@@ -322,6 +330,8 @@ const App: React.FC = () => {
         return <LoadingSpinner message={t('initializingApp')} />;
       case QuizState.AUTH:
         return <AuthFlow onAuthSuccess={handleAuthSuccess} />;
+      case QuizState.PASSWORD_RESET:
+        return <PasswordResetForm onPasswordUpdated={() => addToast(t('passwordUpdateSuccess'), 'success')} />;
       case QuizState.PROFILE_SETUP:
         return currentUser && <OccupationSelector onSelect={handleProfileSetupComplete} onSkip={() => setQuizState(QuizState.IDLE)} />;
       case QuizState.EDIT_PROFILE:
