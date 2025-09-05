@@ -104,6 +104,16 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
             questionsArray = (questionsArray as any)[key];
         }
     }
+    
+    // It might also be an array with one object inside that contains the questions, e.g. [{"quiz": [...]}]
+    if (Array.isArray(questionsArray) && questionsArray.length === 1 && typeof questionsArray[0] === 'object' && questionsArray[0] !== null && !Array.isArray(questionsArray[0])) {
+        const nestedObject = questionsArray[0];
+        const key = Object.keys(nestedObject).find(k => Array.isArray((nestedObject as any)[k]));
+        if (key) {
+            questionsArray = (nestedObject as any)[key];
+        }
+    }
+
 
     if (!Array.isArray(questionsArray)) {
       console.error("Parsed data is not an array:", questionsArray);
