@@ -15,9 +15,14 @@ interface ResultsDisplayProps {
   isSubmittingScore: boolean;
   xpGained: number;
   sources: GroundingChunk[] | null;
+  challengeBonusInfo?: {
+    baseBonus: number;
+    streakBonus: number;
+    newStreak: number;
+  } | null;
 }
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRestart, quizTopic, isSubmittingScore, xpGained, sources }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRestart, quizTopic, isSubmittingScore, xpGained, sources, challengeBonusInfo }) => {
   const { t } = useTranslation();
   const totalQuestions = questions.length;
   const correctAnswers = questions.filter(q => q.userAnswer === q.correctAnswer).length;
@@ -70,8 +75,17 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ points, questions, onRe
       <p className="text-center text-slate-400 mb-6 text-lg">{t('resultsTopicLabel', { topic: quizTopic })}</p>
       
       <div className="text-center mb-8 p-6 bg-slate-700 rounded-lg">
-        {xpGained > 0 && (
-          <p className="text-lg font-bold text-yellow-400 mb-2 animate-pulse">{t('xpGained', { xp: xpGained })}</p>
+        {challengeBonusInfo && (
+          <div className="text-sm text-amber-300 mb-3 border-b border-amber-500/20 pb-3">
+            <p className="font-bold text-base">{t('dailyChallengeTitle')}</p>
+            <p>{t('challengeBonusBase', { xp: challengeBonusInfo.baseBonus.toLocaleString() })}</p>
+            {challengeBonusInfo.streakBonus > 0 && (
+                <p>{t('challengeBonusStreak', { count: challengeBonusInfo.newStreak, xp: challengeBonusInfo.streakBonus.toLocaleString() })}</p>
+            )}
+          </div>
+        )}
+         {xpGained > 0 && (
+          <p className="text-lg font-bold text-yellow-400 mb-2 animate-pulse">{t('xpGained', { xp: xpGained.toLocaleString() })}</p>
         )}
         <p className={`text-5xl font-bold ${feedbackColor}`}>{t('totalPoints', {points})}</p>
         <p className="text-2xl text-slate-200 mt-1">

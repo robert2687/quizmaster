@@ -57,8 +57,12 @@ const resources = {
       // Daily Challenge
       dailyChallengeTitle: "Daily Challenge",
       playChallengeButton: "Play Challenge",
+      playTodaysChallengeButton: "Play Today's Challenge",
+      challengeCompletedButton: "Challenge Completed!",
       viewChallengeLeaderboardButton: "View Leaderboard",
       dailyChallengeLeaderboardTitle: "Daily Challenge Leaderboard",
+      dailyChallengeStreak: "{{count}}-Day Streak",
+      dailyStreakMessage: "Daily challenge streak increased to {{count}} days!",
       // LoadingSpinner
       loadingMessageDefault: "Generating your quiz...",
       loadingMessageTopic: "Generating your quiz on \"{{topic}}\"...",
@@ -95,6 +99,8 @@ const resources = {
       shareResultsText: "I scored {{points}} points on the \"{{topic}}\" quiz on QuizMaster AI! Beat my score!",
       submittingScore: "Submitting score to the leaderboard...",
       sourcesTitle: "Sources from Google Search",
+      challengeBonusBase: "Daily Challenge Bonus: +{{xp}} XP",
+      challengeBonusStreak: "{{count}}-Day Streak Bonus: +{{xp}} XP",
       // QuestionDisplay
       questionLabel: "Question {{current}} of {{total}}",
       // Language Switcher
@@ -192,8 +198,14 @@ const resources = {
       // Daily Challenge
       dailyChallengeTitle: "Denná Výzva",
       playChallengeButton: "Hrať Výzvu",
+      playTodaysChallengeButton: "Hrať Dnešnú Výzvu",
+      challengeCompletedButton: "Výzva Splnená!",
       viewChallengeLeaderboardButton: "Zobraziť Rebríček",
       dailyChallengeLeaderboardTitle: "Rebríček Dennej Výzvy",
+      dailyChallengeStreak_one: "{{count}}-dňová Sèria",
+      dailyChallengeStreak_few: "{{count}}-dňová Séria",
+      dailyChallengeStreak_other: "{{count}}-dňová Séria",
+      dailyStreakMessage: "Séria denných výziev zvýšená na {{count}} dní!",
       // LoadingSpinner
       loadingMessageDefault: "Generujem váš kvíz...",
       loadingMessageTopic: "Generujem váš kvíz na tému \"{{topic}}\"...",
@@ -231,6 +243,10 @@ const resources = {
       shareResultsText: "Získal/a som {{points}} bodov v kvíze na tému \"{{topic}}\" v QuizMaster AI! Prekonaj ma!",
       submittingScore: "Odosielam skóre do rebríčka...",
       sourcesTitle: "Zdroje z Google Vyhľadávania",
+      challengeBonusBase: "Bonus za Dennú Výzvu: +{{xp}} XP",
+      challengeBonusStreak_one: "Bonus za {{count}}-dňovú Sériu: +{{xp}} XP",
+      challengeBonusStreak_few: "Bonus za {{count}}-dňovú Sériu: +{{xp}} XP",
+      challengeBonusStreak_other: "Bonus za {{count}}-dňovú Sériu: +{{xp}} XP",
       // QuestionDisplay
       questionLabel: "Otázka {{current}} z {{total}}",
       // Language Switcher

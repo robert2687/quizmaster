@@ -2,10 +2,10 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, User, GroundingChunk } from './types';
+import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, User, GroundingChunk, ChallengeStatus } from './types';
 import { generateQuizFromTopic } from './services/geminiService';
 import { postScore } from './services/leaderboardService';
-import { getDailyChallengeTopic } from './services/challengeService';
+import { getDailyChallengeTopic, getChallengeStatus, completeDailyChallenge, CHALLENGE_BASE_XP_REWARD, CHALLENGE_STREAK_XP_BONUS_PER_DAY } from './services/challengeService';
 import { getPlayerStats, addXp } from './services/playerStatsService';
 import { checkAndUnlockAchievements } from './services/achievementsService';
 import * as authService from './services/authService';
@@ -25,11 +25,12 @@ import ToastContainer from './components/ToastContainer';
 import TrophyIcon from './components/icons/TrophyIcon';
 import SparklesIcon from './components/icons/SparklesIcon';
 import LinkButton from './components/LinkButton';
-import Button from './components/Button';
 import AchievementsDisplay from './components/AchievementsDisplay';
 import ProfileEditor from './components/ProfileEditor';
 import Avatar from './components/Avatar';
 import OccupationSelector from './components/OccupationSelector';
+import DailyChallengeDisplay from './components/DailyChallengeDisplay';
+import FireIcon from './components/icons/FireIcon';
 
 const SOUND_ENABLED_KEY = 'quizMasterSoundEnabled';
 const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
@@ -38,6 +39,12 @@ const HISTORY_KEY_PREFIX = 'quizMasterHistory_';
 interface LeaderboardConfig {
   topicFilter?: string;
   title: string;
+}
+
+interface ChallengeBonusInfo {
+    baseBonus: number;
+    streakBonus: number;
+    newStreak: number;
 }
 
 const App: React.FC = () => {
@@ -60,6 +67,9 @@ const App: React.FC = () => {
   const [lastXpGained, setLastXpGained] = useState<number>(0);
   const [dailyChallengeTopic, setDailyChallengeTopic] = useState<string>('');
   const [leaderboardConfig, setLeaderboardConfig] = useState<LeaderboardConfig | null>(null);
+  const [challengeStatus, setChallengeStatus] = useState<ChallengeStatus | null>(null);
+  const [isChallengeQuiz, setIsChallengeQuiz] = useState(false);
+  const [challengeBonusInfo, setChallengeBonusInfo] = useState<ChallengeBonusInfo | null>(null);
 
 
   const addToast = useCallback((message: string, type: 'success' | 'info', icon?: React.ReactNode) => {
@@ -81,6 +91,7 @@ const App: React.FC = () => {
     if (user) {
       setCurrentUser(user);
       setPlayerStats(getPlayerStats(user.email));
+      setChallengeStatus(getChallengeStatus(user.email));
       setQuizState(QuizState.IDLE);
     } else {
       setQuizState(QuizState.AUTH);
@@ -98,6 +109,7 @@ const App: React.FC = () => {
   const handleAuthSuccess = (user: User, isNewUser: boolean) => {
     setCurrentUser(user);
     setPlayerStats(getPlayerStats(user.email));
+    setChallengeStatus(getChallengeStatus(user.email));
     if (isNewUser) {
         setQuizState(QuizState.PROFILE_SETUP);
     } else {
@@ -109,11 +121,13 @@ const App: React.FC = () => {
     authService.logout();
     setCurrentUser(null);
     setPlayerStats(null);
+    setChallengeStatus(null);
     setQuizState(QuizState.AUTH);
   };
 
-  const handleGenerateQuiz = useCallback(async (currentTopic: string, currentDifficulty: Difficulty, useGrounding: boolean) => {
+  const handleGenerateQuiz = useCallback(async (currentTopic: string, currentDifficulty: Difficulty, useGrounding: boolean, isChallenge: boolean = false) => {
     if (!currentUser) return;
+    setIsChallengeQuiz(isChallenge);
     setTopic(currentTopic);
     setDifficulty(currentDifficulty);
     setQuizState(QuizState.GENERATING);
@@ -199,8 +213,23 @@ const App: React.FC = () => {
     const xpFromPoints = totalPoints;
     const completionBonus = 50;
     const perfectionBonus = correctAnswers === totalQuestions ? 200 : 0;
-    const totalXp = xpFromPoints + completionBonus + perfectionBonus;
+    let totalXp = xpFromPoints + completionBonus + perfectionBonus;
     
+    let bonusInfo: ChallengeBonusInfo | null = null;
+    if (isChallengeQuiz) {
+        const { newStreak } = completeDailyChallenge(currentUser.email);
+        const baseBonus = CHALLENGE_BASE_XP_REWARD;
+        const streakBonus = newStreak * CHALLENGE_STREAK_XP_BONUS_PER_DAY;
+        totalXp += baseBonus + streakBonus;
+
+        bonusInfo = { newStreak, baseBonus, streakBonus };
+        setChallengeBonusInfo(bonusInfo);
+        
+        setChallengeStatus({ streak: newStreak, completedToday: true });
+        addToast(t('dailyStreakMessage', { count: newStreak }), 'info', <FireIcon className="w-5 h-5 text-white" />);
+    }
+
+
     const { newStats, leveledUp, xpGained } = addXp(currentUser.email, totalXp);
     setLastXpGained(xpGained);
     setPlayerStats(newStats);
@@ -222,13 +251,15 @@ const App: React.FC = () => {
 
     submitScoreToLeaderboard(topic, totalPoints);
     saveQuizToHistory(topic, totalPoints, answeredQuestions, difficulty);
-  }, [currentUser, submitScoreToLeaderboard, saveQuizToHistory, topic, difficulty, addToast, t]);
+  }, [currentUser, submitScoreToLeaderboard, saveQuizToHistory, topic, difficulty, addToast, t, isChallengeQuiz]);
 
   const handleRestart = () => {
     setQuizState(QuizState.IDLE);
     setQuestions([]);
     setTopic('');
     setError(null);
+    setIsChallengeQuiz(false);
+    setChallengeBonusInfo(null);
   };
 
   const handleProfileUpdate = (updatedUser: User) => {
@@ -277,6 +308,7 @@ const App: React.FC = () => {
             isSubmittingScore={isSubmittingScore}
             xpGained={lastXpGained}
             sources={sources}
+            challengeBonusInfo={challengeBonusInfo}
           />
         );
       case QuizState.ERROR:
@@ -291,27 +323,16 @@ const App: React.FC = () => {
       default:
         return (
           <div className="w-full max-w-lg">
-            {/* FIX: The `isGenerating` prop should be false when the quiz state is IDLE. 
-                The previous comparison caused a TypeScript error because it would always be false in this context. */}
-            <TopicForm onGenerateQuiz={handleGenerateQuiz} isGenerating={false} />
-            <div className="mt-6 text-center">
-                <p className="font-bold text-lg text-slate-100 mb-2">{t('dailyChallengeTitle')}: <span className="text-purple-400">{dailyChallengeTopic}</span></p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button onClick={() => handleGenerateQuiz(dailyChallengeTopic, Difficulty.MEDIUM, true)} className="w-full sm:w-auto">
-                        {t('playChallengeButton')}
-                    </Button>
-                    <Button 
-                        onClick={() => {
-                            setLeaderboardConfig({ title: t('dailyChallengeLeaderboardTitle'), topicFilter: dailyChallengeTopic });
-                            setQuizState(QuizState.SHOW_LEADERBOARD);
-                        }} 
-                        variant="secondary" 
-                        className="w-full sm:w-auto"
-                    >
-                        {t('viewChallengeLeaderboardButton')}
-                    </Button>
-                </div>
-            </div>
+            <TopicForm onGenerateQuiz={(...args) => handleGenerateQuiz(...args, false)} isGenerating={false} />
+            <DailyChallengeDisplay
+              dailyChallengeTopic={dailyChallengeTopic}
+              challengeStatus={challengeStatus}
+              onPlay={handleGenerateQuiz}
+              onViewLeaderboard={() => {
+                setLeaderboardConfig({ title: t('dailyChallengeLeaderboardTitle'), topicFilter: dailyChallengeTopic });
+                setQuizState(QuizState.SHOW_LEADERBOARD);
+              }}
+            />
           </div>
         );
     }

@@ -89,3 +89,8 @@ export interface User {
   bio: string;
   occupation?: string;
 }
+
+export interface ChallengeStatus {
+  streak: number;
+  completedToday: boolean;
+}

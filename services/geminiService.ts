@@ -122,9 +122,9 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
 
     const validatedQuestions: QuizQuestion[] = questionsArray.map((item: any, index: number) => {
         // FIX: More flexible validation to handle common variations in property names from the AI.
-        const itemQuestion = item.question || item.q;
-        const itemOptions = item.options || item.choices;
-        const itemCorrectAnswer = item.correctAnswer || item.answer;
+        const itemQuestion = item.question || item.q || item.questionText;
+        const itemOptions = item.options || item.choices || item.answers;
+        const itemCorrectAnswer = item.correctAnswer || item.answer || item.correct_answer;
         
         if (
             typeof itemQuestion !== 'string' ||
