@@ -1,5 +1,3 @@
-
-
 import { User } from '../types';
 import { supabase } from './supabaseClient';
 
@@ -11,6 +9,7 @@ export const signUp = async (playerName: string, email: string, password: string
       data: {
         player_name: playerName,
       },
+      emailRedirectTo: window.location.origin,
     },
   });
 

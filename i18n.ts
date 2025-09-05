@@ -29,6 +29,9 @@ const resources = {
       switchToLogin: "Already have an account? Login",
       authError: "Authentication failed. Please check your credentials.",
       signupError: "Could not create account. The email may already be in use.",
+      verifyEmailTitle: "Check your inbox!",
+      verifyEmailMessage: "A verification link has been sent to {{email}}. Please click the link to complete your registration.",
+      backToLoginButton: "Back to Login",
       // Occupation Selector
       occupationSelectorTitle: "What is your occupation?",
       occupationSelectorSubtitle: "Select one to help us personalize your quiz experience (optional).",
@@ -181,6 +184,9 @@ const resources = {
       switchToLogin: "Už máte účet? Prihláste sa",
       authError: "Prihlásenie zlyhalo. Skontrolujte svoje údaje.",
       signupError: "Nepodarilo sa vytvoriť účet. Email už môže byť použitý.",
+      verifyEmailTitle: "Skontrolujte si doručenú poštu!",
+      verifyEmailMessage: "Na adresu {{email}} bol odoslaný overovací odkaz. Kliknite na odkaz na dokončenie registrácie.",
+      backToLoginButton: "Späť na prihlásenie",
       // Occupation Selector
       occupationSelectorTitle: "Aké je vaše povolanie?",
       occupationSelectorSubtitle: "Vyberte jedno, aby sme vám mohli prispôsobiť kvíz (voliteľné).",

@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuizQuestion, QuizState, Difficulty, QuizHistoryEntry, PlayerStats, ToastMessage, User, GroundingChunk, ChallengeStatus, ImagePayload } from './types';
@@ -86,49 +83,56 @@ const App: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
- useEffect(() => {
+  useEffect(() => {
     setDailyChallengeTopic(getDailyChallengeTopic());
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (session?.user) {
-            const userProfile = await authService.getUserProfile(session.user.id);
-            if (userProfile) {
-                setCurrentUser(userProfile);
-                const stats = await getPlayerStats(userProfile.id);
-                setPlayerStats(stats);
-                setChallengeStatus(getChallengeStatus(userProfile.id));
-                 if (quizState === QuizState.AUTH || quizState === QuizState.INITIALIZING) {
-                    setQuizState(QuizState.IDLE);
-                }
-            } else {
-                 // This can happen if profile creation is pending or failed.
-                 // For this app, we'll treat it as logged out.
-                 await authService.logout();
-                 setCurrentUser(null);
-                 setQuizState(QuizState.AUTH);
+      if (session?.user) {
+        const userProfile = await authService.getUserProfile(session.user.id);
+        if (userProfile) {
+          setCurrentUser(userProfile);
+          const stats = await getPlayerStats(userProfile.id);
+          setPlayerStats(stats);
+          setChallengeStatus(getChallengeStatus(userProfile.id));
+
+          // This is now the single source of truth for state transitions after auth changes.
+          setQuizState((currentQuizState) => {
+            const isAuthScreen = currentQuizState === QuizState.AUTH || currentQuizState === QuizState.INITIALIZING;
+            if (isAuthScreen) {
+              // If user just verified, their occupation won't be set yet. Route them to profile setup.
+              return !userProfile.occupation ? QuizState.PROFILE_SETUP : QuizState.IDLE;
             }
+            // Don't change state if user is already in the app (e.g., in a quiz).
+            return currentQuizState;
+          });
         } else {
-            setCurrentUser(null);
-            setPlayerStats(null);
-            setChallengeStatus(null);
-            setQuizState(QuizState.AUTH);
+          // This can happen if profile creation failed after signup. Log them out.
+          await authService.logout();
+          setCurrentUser(null);
+          setQuizState(QuizState.AUTH);
         }
+      } else {
+        // Logged out state
+        setCurrentUser(null);
+        setPlayerStats(null);
+        setChallengeStatus(null);
+        setQuizState(QuizState.AUTH);
+      }
     });
-    
-     // Check initial session
+
+    // Check initial session on app load
     const checkInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-             setQuizState(QuizState.AUTH);
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setQuizState(QuizState.AUTH);
+      }
     };
     checkInitialSession();
 
-
     return () => {
-        subscription.unsubscribe();
+      subscription.unsubscribe();
     };
-}, [quizState]);
+  }, []); // Empty dependency array ensures this runs only once on mount.
 
   useEffect(() => {
     localStorage.setItem(SOUND_ENABLED_KEY, String(isSoundEnabled));
@@ -138,16 +142,13 @@ const App: React.FC = () => {
     setIsSoundEnabled(prev => !prev);
   };
 
-  const handleAuthSuccess = async (user: User, isNewUser: boolean) => {
+  const handleAuthSuccess = async (user: User) => {
+    // The onAuthStateChange listener is the source of truth for state transitions.
+    // This handler simply ensures the UI has the latest user data immediately after manual login.
     setCurrentUser(user);
     const stats = await getPlayerStats(user.id);
     setPlayerStats(stats);
     setChallengeStatus(getChallengeStatus(user.id));
-    if (isNewUser) {
-        setQuizState(QuizState.PROFILE_SETUP);
-    } else {
-        setQuizState(QuizState.IDLE);
-    }
   };
   
   const handleLogout = async () => {
