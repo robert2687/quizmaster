@@ -33,7 +33,7 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onPasswordUpdated
       // This will trigger the onAuthStateChange listener in App.tsx to transition to the login screen.
       await authService.logout();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update password.');
+      setError(err instanceof Error ? err.message : t('passwordUpdateError'));
       setIsLoading(false);
     }
   };

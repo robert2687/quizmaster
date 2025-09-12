@@ -8,15 +8,10 @@ export const generateQuizFromTopic = async (
   topic: string, 
   difficulty: string, 
   useGrounding: boolean,
-  occupation?: string,
   imagePayload?: ImagePayload | null,
 ): Promise<{ questions: QuizQuestion[]; sources: GroundingChunk[] | null }> => {
   // FIX: Removed manual API key check. Assuming key is provided by the environment as per guidelines.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  const personalizationInstruction = occupation && occupation !== 'None'
-    ? ` The user's occupation is ${occupation}, so tailor the questions to be relevant to someone with that background.`
-    : '';
 
   // --- Prompts ---
   const basePrompt = `You are an expert quiz generator.
@@ -26,7 +21,7 @@ For each question, clearly identify the correct answer by its text.`;
   
   // Prompt for text-based generation
   const standardPrompt = `${basePrompt}
-The quiz should be about the topic: "${topic}" at a ${difficulty} difficulty level.${personalizationInstruction}`;
+The quiz should be about the topic: "${topic}" at a ${difficulty} difficulty level.`;
 
   // Prompt for text-based generation with Google Search grounding
   const groundedPrompt = `${standardPrompt}
@@ -34,7 +29,7 @@ Respond ONLY with a valid JSON array of question objects and nothing else. Do no
 
   // Prompt for image-based generation
   const imagePrompt = `${basePrompt}
-Analyze the provided image and generate the quiz based on its content, context, or subject matter. The difficulty should be ${difficulty}.${personalizationInstruction}
+Analyze the provided image and generate the quiz based on its content, context, or subject matter. The difficulty should be ${difficulty}.
 ${topic ? ` Use the following instruction as a hint: "${topic}".` : ''}
 `;
 

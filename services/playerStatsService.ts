@@ -1,8 +1,8 @@
 import { PlayerStats } from '../types';
-import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 const BASE_XP = 500;
 const LEVEL_SCALING_FACTOR = 1.2;
+const PLAYER_STATS_KEY_PREFIX = 'quizMasterPlayerStats_';
 
 export const getXpForNextLevel = (level: number): number => {
   return Math.floor(BASE_XP * Math.pow(LEVEL_SCALING_FACTOR, level - 1));
@@ -20,22 +20,24 @@ const calculateLevelFromXp = (xp: number): number => {
 };
 
 /**
- * Gets player stats from Supabase, or returns default stats if not found or if Supabase is not configured.
+ * Gets player stats from local storage, or returns default stats if not found.
  */
-export const getPlayerStats = async (userId: string): Promise<PlayerStats> => {
-  if (!isSupabaseConfigured || !userId) return { xp: 0, level: 1 };
-  
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('xp, level')
-    .eq('id', userId)
-    .single();
-  
-  if (error || !data) {
-    console.warn("Could not fetch player stats for user:", userId, error?.message);
+export const getPlayerStats = (userId: string): PlayerStats => {
+  if (!userId) return { xp: 0, level: 1 };
+
+  const key = `${PLAYER_STATS_KEY_PREFIX}${userId}`;
+  const stored = localStorage.getItem(key);
+  if (!stored) {
     return { xp: 0, level: 1 };
   }
-  return { xp: data.xp || 0, level: data.level || 1 };
+
+  try {
+    const stats = JSON.parse(stored) as PlayerStats;
+    return stats;
+  } catch (e) {
+    console.warn("Could not fetch player stats for user:", userId, e);
+    return { xp: 0, level: 1 };
+  }
 };
 
 interface AddXpResult {
@@ -45,15 +47,14 @@ interface AddXpResult {
 }
 
 /**
- * Adds XP to a player's stats in Supabase, checks for level ups, and saves the new stats.
- * Does nothing if Supabase is not configured.
+ * Adds XP to a player's stats in local storage, checks for level ups, and saves the new stats.
  */
-export const addXp = async (userId: string, amount: number): Promise<AddXpResult> => {
-  if (!isSupabaseConfigured || !userId) {
+export const addXp = (userId: string, amount: number): AddXpResult => {
+  if (!userId) {
     return { newStats: { xp: 0, level: 1 }, leveledUp: false, xpGained: 0 };
   }
   
-  const currentStats = await getPlayerStats(userId);
+  const currentStats = getPlayerStats(userId);
   
   let totalXpGained = amount;
   let newXp = currentStats.xp + amount;
@@ -75,18 +76,10 @@ export const addXp = async (userId: string, amount: number): Promise<AddXpResult
   const leveledUp = newLevel > currentStats.level;
   const newStats: PlayerStats = { xp: newXp, level: newLevel };
 
-  // Save the new stats to Supabase
-  const { error } = await supabase
-    .from('profiles')
-    .update({ xp: newStats.xp, level: newStats.level })
-    .eq('id', userId);
-
-  if (error) {
-    console.error("Failed to save player stats:", error);
-    // Return original stats if save fails, to avoid UI inconsistency
-    return { newStats: currentStats, leveledUp: false, xpGained: 0 };
-  }
-
+  // Save the new stats to local storage
+  const key = `${PLAYER_STATS_KEY_PREFIX}${userId}`;
+  localStorage.setItem(key, JSON.stringify(newStats));
+  
   return { newStats, leveledUp, xpGained: totalXpGained };
 };
 

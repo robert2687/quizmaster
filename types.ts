@@ -9,9 +9,7 @@ export interface QuizQuestion {
 
 export enum QuizState {
   INITIALIZING = 'initializing',
-  AUTH = 'auth', // New state for login/signup
-  PROFILE_SETUP = 'profile_setup', // New state for post-signup setup
-  PASSWORD_RESET = 'password_reset',
+  PLAYER_SETUP = 'player_setup', // New state for one-time player name/avatar setup
   IDLE = 'idle',
   GENERATING = 'generating',
   IN_PROGRESS = 'inProgress',
@@ -20,7 +18,6 @@ export enum QuizState {
   SHOW_LEADERBOARD = 'show_leaderboard',
   SHOW_HISTORY = 'show_history',
   SHOW_ACHIEVEMENTS = 'show_achievements',
-  EDIT_PROFILE = 'edit_profile',
 }
 
 export enum Difficulty {
@@ -85,12 +82,13 @@ export interface ToastMessage {
 }
 
 export interface User {
-  id: string; // Supabase user ID
-  email: string;
+  id: string; // Locally stored UUID
   playerName: string;
   avatar: string;
+  // FIX: Added missing properties to conform to usage in auth and profile components.
+  email: string;
   bio: string;
-  occupation?: string;
+  occupation: string | null;
 }
 
 export interface ChallengeStatus {
